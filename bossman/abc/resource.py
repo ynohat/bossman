@@ -21,3 +21,6 @@ class ResourceABC(ABC):
 
   def __str__(self):
     return self.path
+
+  def __rich__(self):
+    return "[yellow]{path}[/yellow]".format(path=self.path)

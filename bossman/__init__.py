@@ -1,4 +1,5 @@
 from os.path import abspath, commonpath, join
+from fnmatch import fnmatch
 
 from bossman.resources import ResourceManager, ResourceStatus
 from bossman.abc.resource_type import ResourceTypeABC
@@ -19,20 +20,21 @@ class Bossman:
       self.resource_manager.register_resource_type(resource_type)
     self.logger = get_class_logger(self)
 
-  def get_resources(self, rev: str = "HEAD") -> list:
-    return self.resource_manager.get_resources(self.repo, rev)
+  def get_resources(self, rev: str = "HEAD", glob: str = "*") -> list:
+    resources = self.resource_manager.get_resources(self.repo, rev)
+    return list(filter(lambda resource: fnmatch(resource.path, glob), resources))
 
   def get_resource_status(self, resource: ResourceABC) -> ResourceStatus:
     resource_type = self.resource_manager.get_resource_type(resource.path)
     local_rev = self.repo.get_last_change_rev(resource.paths)
     remote_rev = resource_type.get_remote_rev(resource)
-    missing_changesets = self.get_changesets(remote_rev, local_rev, [resource])
+    missing_changesets = self.get_changesets(remote_rev.local_rev, local_rev, [resource])
     dirty = resource_type.is_dirty(resource)
     return ResourceStatus(
       local_rev=local_rev,
       remote_rev=remote_rev,
       dirty=dirty,
-      missing_changesets=missing_changesets
+      missing_changesets=list(reversed(missing_changesets))
     )
 
   def get_changesets(self, since_rev: str = None, until_rev: str = "HEAD", resources: list = None) -> str:

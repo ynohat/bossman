@@ -3,6 +3,14 @@ from bossman.repo import Repo
 from bossman.abc.resource_type import ResourceTypeABC
 from bossman.abc.resource import ResourceABC
 
+class RemoteRev:
+  def __init__(self, local_rev=None, remote_rev=None):
+    self.local_rev = local_rev
+    self.remote_rev = remote_rev
+
+  def __str__(self):
+    return "{} ({})".format(self.local_rev, self.remote_rev)
+
 class ResourceStatus:
   def __init__(self, local_rev, remote_rev, dirty, missing_changesets):
     self.local_rev = local_rev

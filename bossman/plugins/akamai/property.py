@@ -8,6 +8,7 @@ from bossman.abc.resource import ResourceABC
 from bossman.changes import Change
 from bossman.plugins.akamai.lib.papi import PAPIClient
 from bossman.changes import Change, ChangeSet
+from bossman.resources import RemoteRev
 
 RE_COMMIT = re.compile("^commit: ([a-z0-9]*)", re.MULTILINE)
 
@@ -45,7 +46,7 @@ class ResourceType(ResourceTypeABC):
     return PropertyResource(path, **kwargs)
 
   def get_remote_rev(self, resource: ResourceABC) -> str:
-    rev = None
+    local_rev, remote_rev = None, None
     property_id = self.papi.get_property_id(resource.name)
     property_version = self.papi.find_latest_property_version(
       property_id,
@@ -53,8 +54,9 @@ class ResourceType(ResourceTypeABC):
     )
     self.logger.info("get_remote_rev {property_name} -> {property_version}".format(property_name=resource.name, property_version=property_version))
     if property_version:
-      rev = RE_COMMIT.search(property_version.get("note")).group(1)
-    return rev
+      remote_rev = property_version.get("propertyVersion")
+      local_rev = RE_COMMIT.search(property_version.get("note")).group(1)
+    return RemoteRev(local_rev=local_rev, remote_rev=remote_rev)
 
   def is_dirty(self, resource: ResourceABC) -> bool:
     """
@@ -65,7 +67,7 @@ class ResourceType(ResourceTypeABC):
     property_id = self.papi.get_property_id(resource.name)
     property_version = self.papi.get_latest_property_version(property_id)
     if property_version:
-      is_dirty = not bool(RE_COMMIT.search(property_version.get("note")))
+      is_dirty = not bool(RE_COMMIT.search(property_version.get("note", "")))
     return is_dirty
 
   def apply(self, changeset: ChangeSet, change: Change) -> bool:
