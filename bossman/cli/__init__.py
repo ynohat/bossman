@@ -30,6 +30,7 @@ def main():
 
 def create_bossman(args):
   conf_path = path.join(args.repo, ".bossman")
+  conf_data = {}
   if path.exists(conf_path):
     fd = open(conf_path, "r")
     conf_data = yaml.safe_load(fd)

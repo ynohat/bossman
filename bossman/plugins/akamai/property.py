@@ -32,7 +32,7 @@ class PropertyResource(ResourceABC):
 
 class ResourceTypeOptions:
   def __init__(self, options):
-    self.edgerc = options.get("edgerc", expanduser("~/.edgerc"))
+    self.edgerc = expanduser(options.get("edgerc", "~/.edgerc"))
     self.section = options.get("section", "papi")
     self.switch_key = options.get("switch_key", None)
 
