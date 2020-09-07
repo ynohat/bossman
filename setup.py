@@ -1,4 +1,4 @@
-import setuptools
+from setuptools import setup, find_namespace_packages
 
 with open("README.md", "r") as fh:
   long_description = fh.read()
@@ -9,7 +9,7 @@ with open("VERSION", "r") as fh:
 with open("requirements.txt", "r") as fh:
   requirements = fh.readlines()
 
-setuptools.setup(
+setup(
   name="bossman",
   version=version,
   author="Anthony Hogg",
@@ -28,7 +28,7 @@ setuptools.setup(
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
   ],
-  packages=["bossman"],
+  packages=find_namespace_packages(include=['bossman.*']),
   package_data={
     # 'qgrepper': ['etc/*.xml', 'etc/*.conf', 'templates/*.j2'],
     # 'examples': ['*']
