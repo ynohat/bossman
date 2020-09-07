@@ -10,4 +10,4 @@ fi
 
 bump2version $1
 python3 setup.py sdist bdist_wheel
-twine upload
+twine upload dist/*
