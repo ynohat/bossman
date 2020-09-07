@@ -9,5 +9,6 @@ then
 fi
 
 bump2version $1
+rm -rf dist
 python3 setup.py sdist bdist_wheel
 twine upload dist/*
