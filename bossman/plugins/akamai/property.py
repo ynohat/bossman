@@ -40,7 +40,7 @@ class ResourceType(ResourceTypeABC):
   def __init__(self, config):
     super(ResourceType, self).__init__(config)
     self.options = ResourceTypeOptions(config.options)
-    self.papi = PAPIClient(self.options.edgerc, self.options.section)
+    self.papi = PAPIClient(self.options.edgerc, self.options.section, self.options.switch_key)
 
   def create_resource(self, path: str, **kwargs):
     return PropertyResource(path, **kwargs)
