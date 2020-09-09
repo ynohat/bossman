@@ -11,7 +11,13 @@ def init(subparsers: argparse._SubParsersAction):
   parser = subparsers.add_parser("log", help="show resource change history")
   parser.set_defaults(func=exec)
 
-def exec(bossman, *args, **kwargs):
-  changesets = bossman.get_changesets()
-  for changeset in changesets:
-    console.print(changeset)
+def exec(bossman: Bossman, *args, **kwargs):
+  resources = bossman.get_resources()
+  revisions = bossman.get_revisions(resources=resources)
+  for revision in revisions:
+    console.print(revision)
+    for resource in resources:
+      changes = revision.get_changes(resource.paths)
+      if len(changes):
+        console.print(resource)
+        console.print(*changes)       

@@ -1,16 +1,16 @@
 
-class BossmanRuntimeError(RuntimeError):
+class BossmanError(RuntimeError):
   """
   Base class for bossman-specific runtime errors.
   """
   pass
 
-class BossmanConfigurationError(BossmanRuntimeError):
+class BossmanConfigurationError(BossmanError):
   """
   Configuration errors indicate that improper options have been passed to bossman.
   """
 
-class MultipleMatchingPluginsError(BossmanRuntimeError):
+class MultipleMatchingPluginsError(BossmanError):
   """
   Bossman matches plugins to resources using glob patterns.
   """

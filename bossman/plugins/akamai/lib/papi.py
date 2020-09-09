@@ -64,8 +64,11 @@ class PAPIClient:
 
   def update_property_rule_tree(self, propertyId, version, ruleTree):
     self.logger.debug("update_property_rule_tree propertyId={propertyId} version={version}".format(propertyId=propertyId, version=version))
+    headers = {}
+    if "ruleFormat" in ruleTree:
+      headers["Content-Type"] = "application/vnd.akamai.papirules.{}+json".format(ruleTree.get("ruleFormat"))
     url = "/papi/v1/properties/{propertyId}/versions/{version}/rules".format(propertyId=propertyId, version=version)
-    response = self.session.put(url, json=ruleTree)
+    response = self.session.put(url, json=ruleTree, headers=headers)
     return response.json()
 
   def update_property_hostnames(self, propertyId, version, hostnames):

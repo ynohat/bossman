@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from bossman.config import ResourceTypeConfig
-from bossman.changes import Change, ChangeSet
+from bossman.repo import Revision
 from bossman.logging import logger
 from bossman.abc.resource import ResourceABC
 import parse
@@ -57,11 +57,6 @@ class ResourceTypeABC(ABC):
         return self.create_resource(canonical, **result.named)
     return None
 
-  def describe_diffs(self, resource: ResourceABC, diffs: list) -> Change:
-    change = Change(resource)
-    change.diffs = diffs
-    return change
-
   @abstractmethod
   def create_resource(self, path, **kwargs) -> ResourceABC:
     pass
@@ -75,5 +70,5 @@ class ResourceTypeABC(ABC):
     pass
 
   @abstractmethod
-  def apply(self, changeset: ChangeSet, change: Change) -> bool:
+  def apply_change(self, resource: ResourceABC, revision: Revision, previous_revision: Revision):
     pass

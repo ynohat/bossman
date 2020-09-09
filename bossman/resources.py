@@ -12,18 +12,18 @@ class RemoteRev:
     return "{} ({})".format(self.local_rev, self.remote_rev)
 
 class ResourceStatus:
-  def __init__(self, local_rev, remote_rev, dirty, missing_changesets):
+  def __init__(self, local_rev, remote_rev, dirty, missing_revisions):
     self.local_rev = local_rev
     self.remote_rev = remote_rev
     self.dirty = dirty
-    self.missing_changesets = missing_changesets
+    self.missing_revisions = missing_revisions
 
   def __str__(self):
     return "local_rev={local_rev} remote_rev={remote_rev} dirty={dirty} changes={changes}".format(
       local_rev=self.local_rev,
       remote_rev=self.remote_rev,
       dirty=self.dirty,
-      changes=len(self.missing_changesets)
+      changes=len(self.missing_revisions)
     )
 
 class ResourceManager:
