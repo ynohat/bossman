@@ -16,8 +16,7 @@ RE_COMMIT = re.compile("^commit: ([a-z0-9]*)", re.MULTILINE)
 _cache = cache.key(__name__)
 
 class PropertyError(BossmanError):
-  def __rich__(self):
-    return "{}: {}".format(self.__class__.__name__, " ".join(self.args))
+  pass
 
 class PropertyResource(ResourceABC):
   def __init__(self, path, **kwargs):

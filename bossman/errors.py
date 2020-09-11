@@ -3,7 +3,8 @@ class BossmanError(RuntimeError):
   """
   Base class for bossman-specific runtime errors.
   """
-  pass
+  def __rich__(self):
+    return "{}: {}".format(self.__class__.__name__, " ".join(self.args))
 
 class BossmanConfigurationError(BossmanError):
   """
