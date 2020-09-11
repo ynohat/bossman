@@ -2,6 +2,9 @@ import json
 from functools import lru_cache
 from bossman.plugins.akamai.lib.edgegrid import Session
 from bossman.logging import get_class_logger
+from bossman.cache import cache
+
+_cache = cache.key(__name__)
 
 class PAPIClient:
   def __init__(self, edgerc, section, switch_key=None, **kwargs):
@@ -18,8 +21,14 @@ class PAPIClient:
 
   def get_property_id(self, propertyName):
     self.logger.debug("get_property_id propertyName={propertyName}".format(propertyName=propertyName))
-    versions = self.find_by_property_name(propertyName)
-    return versions[0].get("propertyId")
+    cache = _cache.key("property_id", propertyName)
+    property_id = cache.get_str()
+    if property_id is None:
+      versions = self.find_by_property_name(propertyName)
+      if len(versions) == 1:
+        property_id = str(versions[0].get("propertyId"))
+        cache.update(property_id)
+    return property_id
 
   def get_latest_property_version(self, propertyId, network=None):
     self.logger.debug("get_latest_property_version propertyId={propertyId} network={network}".format(propertyId=propertyId, network=network))

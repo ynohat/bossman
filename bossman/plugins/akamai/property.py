@@ -3,6 +3,7 @@ import json
 from os import getenv
 from os.path import expanduser, basename, dirname, join
 
+from bossman.cache import cache
 from bossman.errors import BossmanError
 from bossman.abc.resource_type import ResourceTypeABC
 from bossman.abc.resource import ResourceABC
@@ -11,6 +12,8 @@ from bossman.plugins.akamai.lib.papi import PAPIClient
 from bossman.resources import RemoteRev
 
 RE_COMMIT = re.compile("^commit: ([a-z0-9]*)", re.MULTILINE)
+
+_cache = cache.key(__name__)
 
 class PropertyError(BossmanError):
   def __rich__(self):
@@ -52,14 +55,19 @@ class ResourceType(ResourceTypeABC):
   def get_remote_rev(self, resource: PropertyResource) -> str:
     local_rev, remote_rev = None, None
     property_id = self.papi.get_property_id(resource.name)
-    property_version = self.papi.find_latest_property_version(
-      property_id,
-      lambda v: RE_COMMIT.search(v.get("note", ""))
-    )
-    self.logger.info("get_remote_rev {property_name} -> {property_version}".format(property_name=resource.name, property_version=property_version))
-    if property_version:
-      remote_rev = property_version.get("propertyVersion")
-      local_rev = RE_COMMIT.search(property_version.get("note")).group(1)
+    cache = _cache.key("remote_version", property_id)
+    remote_version = cache.get_json()
+    if remote_version is None:
+      remote_version = self.papi.find_latest_property_version(
+        property_id,
+        lambda v: RE_COMMIT.search(v.get("note", ""))
+      )
+      self.logger.info("get_remote_rev {property_name} -> {property_version}".format(property_name=resource.name, property_version=remote_version))
+      if remote_version:
+        cache.update_json(remote_version)
+    if remote_version:
+      remote_rev = remote_version.get("propertyVersion")
+      local_rev = RE_COMMIT.search(remote_version.get("note")).group(1)
     return RemoteRev(local_rev=local_rev, remote_rev=remote_rev)
 
   def is_dirty(self, resource: PropertyResource) -> bool:
@@ -123,7 +131,12 @@ class ResourceType(ResourceTypeABC):
     self.papi.update_property_rule_tree(property_id, next_version.get("propertyVersion"), rules_json)
 
   def get_property_version_for_revision_id(self, property_id, revision_id):
-    search = r'commit: {}'.format(revision_id)
-    predicate = lambda v: search in v.get("note", "")
-    property_version = self.papi.find_latest_property_version(property_id, predicate)
+    cache = _cache.key("property_version", property_id, revision_id)
+    property_version = cache.get_str()
+    if property_version is None:
+      search = r'commit: {}'.format(revision_id)
+      predicate = lambda v: search in v.get("note", "")
+      property_version = self.papi.find_latest_property_version(property_id, predicate)
+      if property_version != None:
+        cache.update(property_version)
     return property_version
