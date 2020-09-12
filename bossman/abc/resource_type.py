@@ -72,3 +72,7 @@ class ResourceTypeABC(ABC):
   @abstractmethod
   def apply_change(self, resource: ResourceABC, revision: Revision, previous_revision: Revision):
     pass
+
+  @abstractmethod
+  def validate_working_tree(self, resource: ResourceABC):
+    pass

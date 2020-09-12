@@ -3,7 +3,7 @@ from os import path, getcwd
 import yaml
 import argparse
 from bossman.errors import BossmanError
-from bossman.cli import status_cmd, log_cmd, apply_cmd
+from bossman.cli import status_cmd, log_cmd, apply_cmd, validate_cmd
 from bossman.config import Config
 from bossman.logging import logger
 from bossman import Bossman
@@ -22,6 +22,7 @@ def main():
     status_cmd.init(subparsers)
     log_cmd.init(subparsers)
     apply_cmd.init(subparsers)
+    validate_cmd.init(subparsers)
 
     args = parser.parse_args()
     bossman = create_bossman(args)

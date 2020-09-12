@@ -46,7 +46,7 @@ class PAPIClient:
     response = self.session.get(url, params=params)
     return response.json().get("versions").get("items")
 
-  def find_latest_property_version(self, propertyId, predicate, pageSize=5, maxOffset=20):
+  def find_latest_property_version(self, propertyId, predicate, pageSize=100, maxOffset=20):
     self.logger.debug("find_latest_property_version propertyId={propertyId}".format(propertyId=propertyId))
     offset = 0
     while offset < maxOffset:
@@ -85,3 +85,27 @@ class PAPIClient:
     url = "/papi/v1/properties/{propertyId}/versions/{version}/hostnames".format(propertyId=propertyId, version=version)
     response = self.session.put(url, json=hostnames)
     return response.json()
+
+  @lru_cache(maxsize=1000) # don't fetch more than once per session, even if the rule format wasn't persistently cacheable
+  def get_rule_format_schema(self, productId, ruleFormat):
+    self.logger.debug("get_rule_format_schema productId={} version={}".format(productId, ruleFormat))
+    cache = _cache.key("schema", "rule_format", productId, ruleFormat)
+    schema = cache.get_json()
+    if schema is None:
+      url = "/papi/v1/schemas/products/{productId}/{ruleFormat}".format(productId=productId, ruleFormat=ruleFormat)
+      response = self.session.get(url)
+      schema = response.json()
+      if ruleFormat != "latest":
+        cache.update_json(schema)
+    return schema
+
+  def get_request_schema(self, request_filename):
+    self.logger.debug("get_request_schema filename={request_filename}".format(request_filename=request_filename))
+    cache = _cache.key("schema", "request", request_filename)
+    schema = cache.get_json()
+    if schema is None:
+      url = "/papi/v1/schemas/request/{request_filename}".format(request_filename=request_filename)
+      response = self.session.get(url)
+      schema = response.json()
+      cache.update_json(schema)
+    return schema

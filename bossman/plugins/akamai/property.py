@@ -2,6 +2,7 @@ import re
 import json
 from os import getenv
 from os.path import expanduser, basename, dirname, join
+import jsonschema
 
 from bossman.cache import cache
 from bossman.errors import BossmanError
@@ -99,23 +100,12 @@ class ResourceType(ResourceTypeABC):
       latest_version = self.papi.get_latest_property_version(property_id)
 
     # before changing anything in PAPI, check that the json files are valid
-    rules_json = None
+    rules = revision.show_path(resource.rules_path)
+    rules_json = self.validate_rules(resource, rules)
     hostnames_json = None
-
-    try:
-      rules = revision.show_path(resource.rules_path)
-      rules_json = json.loads(rules)
-    except json.decoder.JSONDecodeError as err:
-      self.logger.error("{}: bad rules.json - {}", resource, err.args)
-      raise PropertyError(resource, "bad rules.json", err.args)
-
-    try:
-      if resource.hostnames_path in revision.affected_paths():
-        hostnames = revision.show_path(resource.hostnames_path)
-        hostnames_json = json.loads(hostnames)
-    except json.decoder.JSONDecodeError as err:
-      self.logger.error("{}: bad hostnames.json - {}", resource, err.args)
-      raise PropertyError(resource, "bad hostnames.json", err.args)
+    if resource.hostnames_path in revision.affected_paths():
+      hostnames = revision.show_path(resource.hostnames_path)
+      hostnames_json = self.validate_hostnames(resource, hostnames)
 
     # now we can create the new version in PAPI
     next_version = self.papi.create_property_version(property_id, latest_version.get("propertyVersion"))
@@ -131,11 +121,54 @@ class ResourceType(ResourceTypeABC):
 
   def get_property_version_for_revision_id(self, property_id, revision_id):
     cache = _cache.key("property_version", property_id, revision_id)
-    property_version = cache.get_str()
+    property_version = cache.get_json()
     if property_version is None:
       search = r'commit: {}'.format(revision_id)
       predicate = lambda v: search in v.get("note", "")
       property_version = self.papi.find_latest_property_version(property_id, predicate)
       if property_version != None:
-        cache.update(property_version)
+        cache.update_json(property_version)
     return property_version
+
+  def validate_working_tree(self, resource: PropertyResource):
+    with open(resource.hostnames_path, "r") as hfd:
+      hostnames = hfd.read()
+      self.validate_hostnames(resource, hostnames)
+    with open(resource.rules_path, "r") as hfd:
+      rules = hfd.read()
+      self.validate_rules(resource, rules)
+
+  def validate_rules(self, resource: PropertyResource, rules: str):
+    try:
+      rules_json = json.loads(rules)
+      # While these are not mandatory in PAPI, they ARE mandatory in bossman since
+      # it is the easiest and most standard way of telling bossman how to validate
+      # and version-freeze.
+      if not "productId" in rules_json:
+        raise PropertyError("{}: productId field is missing")
+      if not "ruleFormat" in rules_json:
+        raise PropertyError("{}: ruleFormat field is missing")
+
+      schema = self.papi.get_rule_format_schema(rules_json.get("productId"), rules_json.get("ruleFormat"))
+      jsonschema.validate(rules_json, schema)
+      return rules_json
+    except json.decoder.JSONDecodeError as err:
+      self.logger.error("{}: bad rules.json - {}", resource, err.args)
+      raise PropertyError(resource, "bad rules.json", err.args)
+    except jsonschema.ValidationError as err:
+      self.logger.error("{}: invalid rules.json - {}", resource, err.args)
+      raise PropertyError(resource, "invalid rules.json", err.args)
+
+  def validate_hostnames(self, resource: PropertyResource, hostnames: str):
+    try:
+      hostnames_json = json.loads(hostnames)
+      schema = self.papi.get_request_schema("SetPropertyVersionsHostnamesRequestV0.json")
+      jsonschema.validate(hostnames_json, schema)
+      return hostnames_json
+    except json.decoder.JSONDecodeError as err:
+      self.logger.error("{}: bad hostnames.json - {}", resource, err.args)
+      raise PropertyError(resource, "bad hostnames.json", err.args)
+    except jsonschema.ValidationError as err:
+      self.logger.error("{}: bad hostnames.json - {}", resource, err.args)
+      raise PropertyError(resource, "invalid hostnames.json", err.args)
+

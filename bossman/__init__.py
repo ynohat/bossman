@@ -47,3 +47,7 @@ class Bossman:
     previous_revision = self.repo.get_last_revision(resource.paths, revision.parent_id)
     resource_type = self.resource_manager.get_resource_type(resource.path)
     resource_type.apply_change(resource, revision, previous_revision)
+
+  def validate(self, resource: ResourceABC):
+    resource_type = self.resource_manager.get_resource_type(resource.path)
+    resource_type.validate_working_tree(resource)

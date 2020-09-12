@@ -4,3 +4,4 @@ gitpython
 pyyaml
 parse
 rich>=6
+jsonschema>=3.2.0
