@@ -16,6 +16,11 @@ class ResourceABC(ABC):
       return self.path == other.path
     return False
 
+  def __lt__(self, other):
+    if isinstance(other, ResourceABC):
+      return self.path < other.path
+    return False
+
   def __hash__(self):
     return hash(self.path)
 

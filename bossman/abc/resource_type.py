@@ -3,6 +3,7 @@ from bossman.config import ResourceTypeConfig
 from bossman.repo import Revision
 from bossman.logging import logger
 from bossman.abc.resource import ResourceABC
+from bossman.repo import RevisionDetails
 import parse
 from os.path import relpath, join
 
@@ -62,7 +63,11 @@ class ResourceTypeABC(ABC):
     pass
 
   @abstractmethod
-  def get_remote_rev(self, resource: ResourceABC) -> str:
+  def get_revision_details(self, resource: ResourceABC, revision_id: str = None) -> RevisionDetails:
+    """
+    Returns plugin specific information about a given revision.
+    If revision_id is None, then return information about the latest applied revision.
+    """
     pass
 
   @abstractmethod

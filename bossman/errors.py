@@ -4,7 +4,7 @@ class BossmanError(RuntimeError):
   Base class for bossman-specific runtime errors.
   """
   def __rich__(self):
-    return "{}: {}".format(self.__class__.__name__, " ".join(self.args))
+    return "{}: {}".format(self.__class__.__name__, " ".join(str(arg) for arg in self.args))
 
 class BossmanConfigurationError(BossmanError):
   """

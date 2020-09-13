@@ -29,5 +29,5 @@ def exec(bossman: Bossman, glob, force=False, **kwargs):
     for (idx, revision) in enumerate(missing_revisions):
       console.print(Panel(revision, title="{}/{}".format(idx+1, len(missing_revisions))))
       bossman.apply_change(resource, revision)
-    else:
-      console.print(":cookie: [green]all done[green] :cookie:", justify="center")
+  else:
+    console.print(":cookie: [green]all done[green] :cookie:", justify="center")

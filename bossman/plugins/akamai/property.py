@@ -8,9 +8,8 @@ from bossman.cache import cache
 from bossman.errors import BossmanError
 from bossman.abc.resource_type import ResourceTypeABC
 from bossman.abc.resource import ResourceABC
-from bossman.repo import Revision
+from bossman.repo import Revision, RevisionDetails
 from bossman.plugins.akamai.lib.papi import PAPIClient
-from bossman.resources import RemoteRev
 
 RE_COMMIT = re.compile("^commit: ([a-z0-9]*)", re.MULTILINE)
 
@@ -52,23 +51,16 @@ class ResourceType(ResourceTypeABC):
   def create_resource(self, path: str, **kwargs):
     return PropertyResource(path, **kwargs)
 
-  def get_remote_rev(self, resource: PropertyResource) -> str:
-    local_rev, remote_rev = None, None
+  def get_revision_details(self, resource: ResourceABC, revision_id: str = None) -> RevisionDetails:
+    version_number = None
     property_id = self.papi.get_property_id(resource.name)
-    cache = _cache.key("remote_version", property_id)
-    remote_version = cache.get_json()
-    if remote_version is None:
-      remote_version = self.papi.find_latest_property_version(
-        property_id,
-        lambda v: RE_COMMIT.search(v.get("note", ""))
-      )
-      self.logger.info("get_remote_rev {property_name} -> {property_version}".format(property_name=resource.name, property_version=remote_version))
-      if remote_version:
-        cache.update_json(remote_version)
-    if remote_version:
-      remote_rev = remote_version.get("propertyVersion")
-      local_rev = RE_COMMIT.search(remote_version.get("note")).group(1)
-    return RemoteRev(local_rev=local_rev, remote_rev=remote_rev)
+    if property_id is not None:
+      if revision_id is None:
+        revision_id = self.get_last_applied_revision_id(property_id)
+      property_version = self.get_property_version_for_revision_id(property_id, revision_id)
+      if property_version:
+        version_number = property_version.get("propertyVersion")
+    return RevisionDetails(id=revision_id, details="v"+str(version_number) if version_number else None)
 
   def is_dirty(self, resource: PropertyResource) -> bool:
     """
@@ -77,9 +69,10 @@ class ResourceType(ResourceTypeABC):
     """
     is_dirty = True
     property_id = self.papi.get_property_id(resource.name)
-    property_version = self.papi.get_latest_property_version(property_id)
-    if property_version:
-      is_dirty = not bool(RE_COMMIT.search(property_version.get("note", "")))
+    if property_id is not None:
+      property_version = self.papi.get_latest_property_version(property_id)
+      if property_version:
+        is_dirty = not bool(RE_COMMIT.search(property_version.get("note", "")))
     return is_dirty
 
   def apply_change(self, resource: PropertyResource, revision: Revision, previous_revision: Revision=None):
@@ -129,6 +122,19 @@ class ResourceType(ResourceTypeABC):
       if property_version != None:
         cache.update_json(property_version)
     return property_version
+
+  def get_last_applied_revision_id(self, property_id):
+    """
+    Return the last revision id applied to the resource.
+    This works by searching for a pattern in the property version notes.
+    """
+    property_version = self.papi.find_latest_property_version(
+      property_id,
+      lambda v: RE_COMMIT.search(v.get("note", ""))
+    )
+    if property_version:
+      return RE_COMMIT.search(property_version.get("note")).group(1)
+    return None
 
   def validate_working_tree(self, resource: PropertyResource):
     with open(resource.hostnames_path, "r") as hfd:

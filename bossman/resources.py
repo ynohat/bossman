@@ -3,25 +3,19 @@ from bossman.repo import Repo
 from bossman.abc.resource_type import ResourceTypeABC
 from bossman.abc.resource import ResourceABC
 
-class RemoteRev:
-  def __init__(self, local_rev=None, remote_rev=None):
-    self.local_rev = local_rev
-    self.remote_rev = remote_rev
-
-  def __str__(self):
-    return "{} ({})".format(self.local_rev, self.remote_rev)
-
 class ResourceStatus:
-  def __init__(self, local_rev, remote_rev, dirty, missing_revisions):
-    self.local_rev = local_rev
-    self.remote_rev = remote_rev
+  def __init__(self, last_revision, last_revision_details, last_applied_revision, last_applied_revision_details, dirty, missing_revisions):
+    self.last_revision = last_revision
+    self.last_revision_details = last_revision_details
+    self.last_applied_revision = last_applied_revision
+    self.last_applied_revision_details = last_applied_revision_details
     self.dirty = dirty
     self.missing_revisions = missing_revisions
 
   def __str__(self):
-    return "local_rev={local_rev} remote_rev={remote_rev} dirty={dirty} changes={changes}".format(
-      local_rev=self.local_rev,
-      remote_rev=self.remote_rev,
+    return "last_revision={last_revision} last_applied_revision={last_applied_revision} dirty={dirty} changes={changes}".format(
+      last_revision=self.last_revision.id,
+      last_applied_revision=self.last_applied_revision,
       dirty=self.dirty,
       changes=len(self.missing_revisions)
     )

@@ -170,6 +170,22 @@ class Revision:
     # for change in self.changes.values():
     #   yield change
 
+class RevisionDetails:
+  """
+  Bossman creates new versions of resources through plugins. It doesn't need
+  to know much about the implementation details of the plugin, but it does
+  provide an opportunity to give context about an applied revision.
+  
+  Instances of this class join a revision id to plugin specific details, which
+  could typically be a remote version number.
+  """
+  def __init__(self, id, details):
+    self.id = id
+    self.details = details
+
+  def __str__(self):
+    return "{} ({})".format(self.id, self.details)
+
 class Repo:
   def __init__(self, root):
     self.logger = get_class_logger(self)
@@ -200,6 +216,15 @@ class Repo:
       return Revision(commit, diffs)
     except StopIteration:
       return None
+
+  def get_revision(self, rev: str, paths: list = None):
+    commit = self._repo.rev_parse(rev)
+    prev = git.NULL_TREE
+    diffs = []
+    if commit.parents:
+      prev = commit.parents[0]
+      diffs = commit.diff(prev, paths=paths, R=True) # R=True -> reverse
+    return Revision(commit, diffs)
 
   def get_revisions(self, since_rev: str = None, until_rev: str = "HEAD",  paths: list = None) -> list:
     commitRange = ("{since_rev}..{until_rev}".format(since_rev=since_rev, until_rev=until_rev)
