@@ -54,12 +54,13 @@ class ResourceType(ResourceTypeABC):
   def get_revision_details(self, resource: ResourceABC, revision_id: str = None) -> RevisionDetails:
     version_number = None
     property_id = self.papi.get_property_id(resource.name)
-    if property_id is not None:
+    if property_id is not None: # if the property exists
       if revision_id is None:
         revision_id = self.get_last_applied_revision_id(property_id)
-      property_version = self.get_property_version_for_revision_id(property_id, revision_id)
-      if property_version:
-        version_number = property_version.get("propertyVersion")
+      if revision_id is not None: # revision_id will be None if bossman never applied any changes to this config
+        property_version = self.get_property_version_for_revision_id(property_id, revision_id)
+        if property_version:
+          version_number = property_version.get("propertyVersion")
     return RevisionDetails(id=revision_id, details="v"+str(version_number) if version_number else None)
 
   def is_dirty(self, resource: PropertyResource) -> bool:
