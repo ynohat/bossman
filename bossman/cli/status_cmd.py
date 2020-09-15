@@ -47,8 +47,8 @@ def render_pending(resource, status: ResourceStatus):
   missing_revisions = status.missing_revisions
   if len(missing_revisions) > 0:
     if len(missing_revisions) > 1:
-      first, last = status.remote_rev.local_rev, missing_revisions[-1]
-      yield "[magenta]{n} revisions pending ({first}...{last})[/magenta]".format(n=len(missing_revisions), first=first, last=last.id)
+      first, last = missing_revisions[0].id, missing_revisions[-1].id
+      yield "[magenta]{n} revisions pending ({first}^..{last})[/magenta]".format(n=len(missing_revisions), first=first, last=last)
     else:
       yield "[magenta]{n} revision pending ({rev})[/magenta]".format(n=len(missing_revisions), rev=missing_revisions[0].id)
   else:
