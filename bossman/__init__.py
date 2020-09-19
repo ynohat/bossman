@@ -27,6 +27,18 @@ class Bossman:
     resources = self.resource_manager.get_resources(self.repo, rev)
     return list(sorted(filter(lambda resource: fnmatch(resource.path, glob), resources)))
 
+  def get_missing_revisions(self, resource: ResourceABC) -> list:
+    resource_type = self.resource_manager.get_resource_type(resource.path)
+    revs = self.get_revisions(resources=[resource])
+    missing = []
+    for rev in reversed(revs):
+      rev_details = resource_type.get_revision_details(resource, rev.id)
+      if rev_details.details is None:
+        missing.append(rev)
+      else:
+        break
+    return list(reversed(missing))
+
   def get_resource_status(self, resource: ResourceABC) -> ResourceStatus:
     resource_type = self.resource_manager.get_resource_type(resource.path)
     # latest commit affecting this resource
@@ -37,7 +49,7 @@ class Bossman:
     last_applied_revision_details = resource_type.get_revision_details(resource)
     # get revision from local repo
     last_applied_revision = self.repo.get_revision(last_applied_revision_details.id, resource.paths) if last_applied_revision_details.id else None
-    missing_revisions = self.repo.get_revisions(last_applied_revision_details.id, last_revision.id, resource.paths)
+    missing_revisions = self.get_missing_revisions(resource)
     dirty = resource_type.is_dirty(resource)
     return ResourceStatus(
       last_revision=last_revision,
