@@ -31,7 +31,7 @@ class Bossman:
     resource_type = self.resource_manager.get_resource_type(resource.path)
     revs = self.get_revisions(resources=[resource])
     missing = []
-    for rev in reversed(revs):
+    for rev in revs:
       rev_details = resource_type.get_revision_details(resource, rev.id)
       if rev_details.details is None:
         missing.append(rev)
@@ -45,17 +45,11 @@ class Bossman:
     last_revision = self.repo.get_last_revision(resource.paths)
     # get info from the plugin about that revision (remote version number?)
     last_revision_details = resource_type.get_revision_details(resource, last_revision.id)
-    # get latest applied revision id and plugin specific info from remote history
-    last_applied_revision_details = resource_type.get_revision_details(resource)
-    # get revision from local repo
-    last_applied_revision = self.repo.get_revision(last_applied_revision_details.id, resource.paths) if last_applied_revision_details.id else None
     missing_revisions = self.get_missing_revisions(resource)
     dirty = resource_type.is_dirty(resource)
     return ResourceStatus(
       last_revision=last_revision,
       last_revision_details=last_revision_details,
-      last_applied_revision=last_applied_revision,
-      last_applied_revision_details=last_applied_revision_details,
       dirty=dirty,
       missing_revisions=list(reversed(missing_revisions))
     )
