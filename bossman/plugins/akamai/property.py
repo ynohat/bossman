@@ -110,7 +110,7 @@ class ResourceType(ResourceTypeABC):
       self.papi.update_property_hostnames(property_id, next_version.get("propertyVersion"), hostnames_json)
     # then, regardless of whether there was a change to the rule tree, we need to update it with
     # the commit message and id, otherwise we will get a dirty status
-    rules_json.update(comments="{}\n\ncommit: {}".format(revision.message.strip(), revision.id))
+    rules_json.update(comments="{}\n\ncommit: {}\nbranch: {}".format(revision.message.strip(), revision.id, ", ".join(revision.branches)))
     self.papi.update_property_rule_tree(property_id, next_version.get("propertyVersion"), rules_json)
 
   def get_property_version_for_revision_id(self, property_id, revision_id):
