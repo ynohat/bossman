@@ -25,6 +25,7 @@ class Bossman:
 
   def get_resources(self, rev: str = "HEAD", glob: str = "*") -> list:
     resources = self.resource_manager.get_resources(self.repo, rev)
+    glob = "*" + glob.strip("*") + "*"
     return list(sorted(filter(lambda resource: fnmatch(resource.path, glob), resources)))
 
   def get_missing_revisions(self, resource: ResourceABC) -> list:
