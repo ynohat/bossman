@@ -57,3 +57,7 @@ class SetVerbosity(argparse.Action):
     import logging
     logging.basicConfig(level=values)
     logger.info("SetVerbosity verbosity={verbosity}".format(verbosity=values))
+
+if __name__ == '__main__':
+  # Make bossman.cli.__init__ callable (for VS Code Debug)
+  main()
