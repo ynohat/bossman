@@ -116,6 +116,12 @@ class Revision:
       return None
 
   @property
+  def branches(self):
+    cmd = git.cmd.Git(self.commit.repo.working_tree_dir)
+    branches = cmd.branch(contains=self.id, format="%(refname:short)")
+    return branches.splitlines()
+
+  @property
   def date(self) -> datetime:
     return self.commit.committed_datetime
 
