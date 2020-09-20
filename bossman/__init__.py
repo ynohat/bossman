@@ -40,6 +40,10 @@ class Bossman:
         break
     return list(reversed(missing))
 
+  def get_revision_details(self, resource: ResourceABC, revision_id: str):
+    resource_type = self.resource_manager.get_resource_type(resource.path)
+    return resource_type.get_revision_details(resource, revision_id)
+
   def get_resource_status(self, resource: ResourceABC) -> ResourceStatus:
     resource_type = self.resource_manager.get_resource_type(resource.path)
     # latest commit affecting this resource

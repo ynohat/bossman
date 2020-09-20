@@ -78,7 +78,7 @@ class ResourceType(ResourceTypeABC):
 
   def apply_change(self, resource: PropertyResource, revision: Revision, previous_revision: Revision=None):
     # we should only call this function if the Revision concerns the resource
-    assert len(set(resource.paths).intersection(revision.affected_paths())) > 0
+    assert len(set(resource.paths).intersection(revision.affected_paths)) > 0
 
     property_id = self.papi.get_property_id(resource.name)
     if not property_id:
@@ -97,7 +97,7 @@ class ResourceType(ResourceTypeABC):
     rules = revision.show_path(resource.rules_path)
     rules_json = self.validate_rules(resource, rules)
     hostnames_json = None
-    if resource.hostnames_path in revision.affected_paths():
+    if resource.hostnames_path in revision.affected_paths:
       hostnames = revision.show_path(resource.hostnames_path)
       hostnames_json = self.validate_hostnames(resource, hostnames)
 

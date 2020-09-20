@@ -149,6 +149,7 @@ class Revision:
   def author_email(self) -> str:
     return self.commit.author.email
 
+  @property
   def affected_paths(self) -> list:
     return self.changes.keys()
 
