@@ -2,6 +2,7 @@ from os import getcwd
 import git
 import argparse
 from bossman import Bossman
+from bossman.repo import Revision
 from bossman.resources import ResourceABC
 from rich.console import Console
 
@@ -16,9 +17,20 @@ def exec(bossman: Bossman, glob, *args, **kwargs):
   resources = bossman.get_resources(glob=glob)
   revisions = bossman.get_revisions(resources=resources)
   for revision in revisions:
-    console.print(revision)
-    for resource in resources:
-      changes = revision.get_changes(resource.paths)
+    view = RevisionView(revision, resources)
+    console.print(view, end="")
+    console.print("\n")
+
+class RevisionView:
+  def __init__(self, revision: Revision, resources: list):
+    self.revision = revision
+    self.resources = resources
+
+  def __rich_console__(self, console, options):
+    yield "\[{}] [yellow]{}[/] | [grey62]{}[/]".format(self.revision.id, self.revision.short_message, self.revision.author_name)
+    for resource in self.resources:
+      changes = self.revision.get_changes(resource.paths)
       if len(changes):
-        console.print(resource)
-        console.print(*changes)       
+        change_type = lambda ct: "+" if ct == "A" else "-" if ct == "D" else "~"
+        changes = ("[grey37]{}{}[/]".format(change_type(c.change_type), c.basename) for c in changes)
+        yield "| [blue]{}[/] {}".format(resource, " ".join(list(changes)))

@@ -55,6 +55,14 @@ class Change(ABC):
     return self.diff.b_path
 
   @property
+  def basename(self):
+    return basename(self.path)
+
+  @property
+  def change_type(self):
+    return self.diff.change_type
+
+  @property
   def contents(self):
     return self.diff.b_blob.data_stream.read()
 
@@ -70,7 +78,7 @@ class Change(ABC):
     yield "[{color}]{change_type} {name}[{color}]".format(
       color=color,
       change_type=self.diff.change_type,
-      name=basename(self.path),
+      name=self.basename,
     )
 
 class AddChange(Change):
@@ -212,7 +220,24 @@ class Repo:
     visitor(commit.tree)
     return paths
 
+  def get_head(self):
+    """
+    Returns the HEAD revision, or None if this is the first commit.
+    """
+    try:
+      commit = next(self._repo.iter_commits())
+      prev = git.NULL_TREE
+      if commit.parents:
+        prev = commit.parents[0]
+      diffs = commit.diff(prev, R=True)
+      return Revision(commit, diffs)
+    except StopIteration:
+      return None
+
   def get_last_revision(self, paths: list, rev: str = "HEAD") -> Revision:
+    """
+    Returns the last revision in {rev}'s ancestry to have affected {paths}.
+    """
     try:
       commit = next(self._repo.iter_commits(rev, paths=paths))
       prev = git.NULL_TREE
@@ -224,6 +249,9 @@ class Repo:
       return None
 
   def get_revision(self, rev: str, paths: list = None):
+    """
+    Returns the revision {rev}, with diffs for {paths}.
+    """
     commit = self._repo.rev_parse(rev)
     prev = git.NULL_TREE
     diffs = []
@@ -233,6 +261,10 @@ class Repo:
     return Revision(commit, diffs)
 
   def get_revisions(self, since_rev: str = None, until_rev: str = "HEAD",  paths: list = None) -> list:
+    """
+    Returns all revisions having affected {paths} in the ancestry of {until_rev}, bounded by {since_rev} if
+    specified.
+    """
     commitRange = ("{since_rev}..{until_rev}".format(since_rev=since_rev, until_rev=until_rev)
       if since_rev
       else until_rev)
