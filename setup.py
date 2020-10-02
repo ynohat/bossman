@@ -28,7 +28,7 @@ setup(
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
   ],
-  packages=find_namespace_packages(include=['bossman.*']),
+  packages=find_namespace_packages(include=['bossman', 'bossman.*']),
   install_requires=requirements,
   python_requires='>=3.5',
   zip_safe=False
