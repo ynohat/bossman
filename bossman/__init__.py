@@ -56,7 +56,7 @@ class Bossman:
       last_revision=last_revision,
       last_revision_details=last_revision_details,
       dirty=dirty,
-      missing_revisions=list(reversed(missing_revisions))
+      missing_revisions=list(missing_revisions)
     )
 
   def get_revision(self, rev: str = None, resources: list = None) -> str:
