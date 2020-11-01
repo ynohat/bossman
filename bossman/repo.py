@@ -181,7 +181,7 @@ class Revision:
     return s
 
   def __rich_console__(self, console, options):
-    yield "[b][{}][/b] {} | {} {}".format(self.id, self.short_message, self.author_name, self.date)
+    yield "[b]\[{}][/b] {} | {} {}".format(self.id, self.short_message, self.author_name, self.date)
     # for change in self.changes.values():
     #   yield change
 
