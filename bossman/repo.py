@@ -5,6 +5,7 @@ from bossman.errors import BossmanError
 from bossman.logging import get_class_logger
 from datetime import datetime
 import gitdb.exc
+import yaml
 
 def true(*args, **kwargs):
   return True
@@ -101,7 +102,32 @@ class DeleteChange(Change):
   def contents(self):
     return self.diff.a_blob.data_stream.read()
 
+class Notes:
+  def __init__(self, commit: git.Commit, ns: str = None):
+    self.commit = commit
+    self.ns = ns.strip("/")
 
+  def set(self, **kwargs):
+    args = []
+    if self.ns is not None:
+      args.extend(("--ref", self.ns))
+    args.extend(("append", "-m", yaml.safe_dump(kwargs), self.commit.hexsha))
+    self.commit.repo.git.notes(*args)
+
+  def get(self, k: str, default=None):
+    raw = self.read()
+    notes = yaml.safe_load(raw if raw else '{}')
+    return notes.get(k, default)
+
+  def read(self):
+    args = []
+    if self.ns is not None:
+      args.extend(("--ref", self.ns))
+    args.extend(("show", self.commit.hexsha))
+    try:
+      return self.commit.repo.git.notes(*args)
+    except git.GitCommandError:
+      return None
 
 class Revision:
   def __init__(self, commit: git.Commit, diffs: git.Diff):
@@ -172,6 +198,9 @@ class Revision:
   def get_change(self, path: str) -> Change:
     return self.changes.get(path, None)
 
+  def get_notes(self, ns: str = None) -> Notes:
+    return Notes(self.commit, ns)
+
   def __str__(self):
     s = "[{}] {} {} | {}".format(self.id, self.short_message, self.author_name, self.date)
     if len(self.changes):
@@ -205,6 +234,9 @@ class Repo:
   def __init__(self, root):
     self.logger = get_class_logger(self)
     self._repo = git.Repo(root)
+
+  def config_writer(self):
+    return self._repo.config_writer()
 
   def get_paths(self, rev: str = "HEAD", predicate = true) -> list:
     """

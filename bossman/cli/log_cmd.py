@@ -32,7 +32,7 @@ class RevisionView:
     for resource in self.resources:
       if set(resource.paths).intersection(self.revision.affected_paths):
         changes = self.revision.get_changes(resource.paths)
-        details = self.bossman.get_revision_details(resource, self.revision.id)
+        details = self.bossman.get_revision_details(resource, self.revision)
         if len(changes):
           change_type = lambda ct: "+" if ct == "A" else "-" if ct == "D" else "~"
           changes = ("[grey37]{}{}[/]".format(change_type(c.change_type), c.basename) for c in changes)

@@ -1,10 +1,36 @@
 import json
+import time
 from functools import lru_cache
 from bossman.plugins.akamai.lib.edgegrid import Session
 from bossman.logging import get_class_logger
 from bossman.cache import cache
 
 _cache = cache.key(__name__)
+
+class PAPIBulkActivation:
+  def __init__(self):
+    self.payload = dict(
+      defaultActivationSettings=dict(
+        acknowledgeAllWarnings=True,
+        useFastFallback=False,
+        fastPush=True,
+        complianceRecord=dict(
+          nonComplianceReason="NO_PRODUCTION_TRAFFIC",
+        )
+      ),
+      activatePropertyVersions=[]
+    )
+
+  def add(self, property_id, property_version, network, notifyEmails):
+    self.payload.get("activatePropertyVersions").append(dict(
+      propertyId=property_id,
+      propertyVersion=property_version,
+      network=network,
+      notifyEmails=notifyEmails,
+    ))
+
+  def __str__(self):
+    return json.dumps(self.payload)
 
 class PAPIClient:
   def __init__(self, edgerc, section, switch_key=None, **kwargs):
@@ -109,3 +135,25 @@ class PAPIClient:
       schema = response.json()
       cache.update_json(schema)
     return schema
+
+  def bulk_activate(self, bulkActivation: PAPIBulkActivation):
+    self.logger.debug("bulk_activate bulkActivation={}".format(bulkActivation))
+    url = "/papi/v1/bulk/activations"
+    response = self.session.post(url, json=bulkActivation.payload)
+    bulkActivationUrl = response.json().get("bulkActivationLink")
+    while True:
+      time.sleep(2)
+      status_response = self.session.get(bulkActivationUrl)
+      status_response_json = status_response.json()
+      if status_response_json.get("bulkActivationStatus") == "COMPLETE":
+        activation_statuses = dict((apv.get("propertyName"), dict(
+          activationStatus=apv.get("activationStatus"),
+          taskStatus=apv.get("taskStatus"),
+          propertyId=apv.get("propertyId"),
+          propertyVersion=apv.get("propertyVersion"),
+          network=apv.get("network"),
+          fatalError=apv.get("fatalError", '{}')
+        )) for apv in status_response_json.get("activatePropertyVersions"))
+        return activation_statuses
+    return response.json()
+

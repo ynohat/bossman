@@ -3,7 +3,7 @@ from os import path, getcwd
 import yaml
 import argparse
 from bossman.errors import BossmanError
-from bossman.cli import status_cmd, log_cmd, apply_cmd, validate_cmd
+from bossman.cli import status_cmd, log_cmd, apply_cmd, validate_cmd, prerelease_cmd, release_cmd
 from bossman.config import Config
 from bossman.logging import logger
 from bossman import Bossman
@@ -19,10 +19,13 @@ def main():
     parser.add_argument("--repo", help="path to the repository", default=getcwd())
 
     subparsers = parser.add_subparsers(title="Subcommands")
+    version_cmd_init(subparsers)
     status_cmd.init(subparsers)
     log_cmd.init(subparsers)
     apply_cmd.init(subparsers)
     validate_cmd.init(subparsers)
+    prerelease_cmd.init(subparsers)
+    release_cmd.init(subparsers)
 
     args = parser.parse_args()
     bossman = create_bossman(args)
@@ -33,6 +36,10 @@ def main():
       parser.print_usage()
   except BossmanError as err:
     print(err)
+
+def version_cmd_init(subparsers: argparse._SubParsersAction):
+  parser = subparsers.add_parser("version", help="print the current version of bossman")
+  parser.set_defaults(func=lambda bossman, *args, **kwargs: print(bossman.version))
 
 def create_bossman(args):
   conf_path = path.join(args.repo, ".bossman")

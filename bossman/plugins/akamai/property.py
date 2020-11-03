@@ -9,7 +9,7 @@ from bossman.errors import BossmanError
 from bossman.abc.resource_type import ResourceTypeABC
 from bossman.abc.resource import ResourceABC
 from bossman.repo import Revision, RevisionDetails
-from bossman.plugins.akamai.lib.papi import PAPIClient
+from bossman.plugins.akamai.lib.papi import PAPIClient, PAPIBulkActivation
 
 RE_COMMIT = re.compile("^commit: ([a-z0-9]*)", re.MULTILINE)
 
@@ -51,17 +51,18 @@ class ResourceType(ResourceTypeABC):
   def create_resource(self, path: str, **kwargs):
     return PropertyResource(path, **kwargs)
 
-  def get_revision_details(self, resource: ResourceABC, revision_id: str = None) -> RevisionDetails:
+  def get_revision_details(self, resource: ResourceABC, revision: Revision) -> RevisionDetails:
     version_number = None
     property_id = self.papi.get_property_id(resource.name)
     if property_id is not None: # if the property exists
-      if revision_id is None:
-        revision_id = self.get_last_applied_revision_id(property_id)
-      if revision_id is not None: # revision_id will be None if bossman never applied any changes to this config
-        property_version = self.get_property_version_for_revision_id(property_id, revision_id)
+      notes = revision.get_notes(resource.path)
+      version_number = notes.get("property_version", None)
+      if version_number is None:
+        property_version = self.get_property_version_for_revision_id(property_id, revision.id)
         if property_version:
+          notes.set(property_version=property_version.get("propertyVersion"))
           version_number = property_version.get("propertyVersion")
-    return RevisionDetails(id=revision_id, details="v"+str(version_number) if version_number else None)
+    return RevisionDetails(id=revision.id, details="v"+str(version_number) if version_number else None)
 
   def is_dirty(self, resource: PropertyResource) -> bool:
     """
@@ -76,13 +77,19 @@ class ResourceType(ResourceTypeABC):
         is_dirty = not bool(RE_COMMIT.search(property_version.get("note", "")))
     return is_dirty
 
+  def get_property_id(self, property_name):
+    property_id = self.papi.get_property_id(property_name)
+    if not property_id:
+      raise PropertyError(property_name, "not found")
+    return property_id
+
   def apply_change(self, resource: PropertyResource, revision: Revision, previous_revision: Revision=None):
     # we should only call this function if the Revision concerns the resource
     assert len(set(resource.paths).intersection(revision.affected_paths)) > 0
 
-    property_id = self.papi.get_property_id(resource.name)
-    if not property_id:
-      raise PropertyError(resource, "not found")
+    property_id = self.get_property_id(resource.name)
+
+    notes = revision.get_notes(resource.path)
 
     latest_version = None
     # if previous_revision was provided, we can figure out the property version to base
@@ -111,7 +118,13 @@ class ResourceType(ResourceTypeABC):
     # then, regardless of whether there was a change to the rule tree, we need to update it with
     # the commit message and id, otherwise we will get a dirty status
     rules_json.update(comments="{}\n\ncommit: {}\nbranch: {}".format(revision.message.strip(), revision.id, ", ".join(revision.branches)))
-    self.papi.update_property_rule_tree(property_id, next_version.get("propertyVersion"), rules_json)
+    result = self.papi.update_property_rule_tree(property_id, next_version.get("propertyVersion"), rules_json)
+
+    notes.set(
+      property_version=result.get("propertyVersion"),
+      property_id=result.get("propertyId"),
+      etag=result.get("etag")
+    )
 
   def get_property_version_for_revision_id(self, property_id, revision_id):
     cache = _cache.key("property_version", property_id, revision_id)
@@ -179,3 +192,30 @@ class ResourceType(ResourceTypeABC):
       self.logger.error("{}: bad hostnames.json - {}", resource, err.args)
       raise PropertyError(resource, "invalid hostnames.json", err.args)
 
+  def _release(self, resources: list, revision: Revision, network: str):
+    bulk_activation = PAPIBulkActivation()
+    for resource in resources:
+      notes = revision.get_notes(resource.path)
+      property_id = notes.get("property_id")
+      if property_id is None:
+        property_id = self.get_property_id(resource.name)
+        notes.set(property_id=property_id)
+      property_version = notes.get("property_version")
+      if property_version is None:
+        property_version = self.get_property_version_for_revision_id(property_id, revision.id)
+        notes.set(property_version=property_version)
+      bulk_activation.add(property_id, property_version, network, [revision.author_email])
+    result = self.papi.bulk_activate(bulk_activation)
+    for resource in resources:
+      status = result.get(resource.name)
+      msg = "activation of v{propertyVersion} on {network} started".format(**status)
+      if status.get("taskStatus") == "SUBMISSION_ERROR":
+        fatalError = json.loads(status.get("fatalError"))
+        msg = "activation of v{propertyVersion} on {network} failed: {error}".format(error=fatalError.get("title", status.get("taskStatus")), **status)
+      print("{}: {}".format(resource.path, msg))
+
+  def prerelease(self, resources: list, revision: Revision):
+    self._release(resources, revision, "STAGING")
+
+  def release(self, resources: list, revision: Revision):
+    self._release(resources, revision, "PRODUCTION")

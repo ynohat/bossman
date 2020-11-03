@@ -81,3 +81,7 @@ class ResourceTypeABC(ABC):
   @abstractmethod
   def validate_working_tree(self, resource: ResourceABC):
     pass
+
+  @abstractmethod
+  def prerelease(self, resources: list, revision: Revision):
+    pass
