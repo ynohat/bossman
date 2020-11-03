@@ -238,13 +238,22 @@ class Repo:
   def config_writer(self):
     return self._repo.config_writer()
 
+  def rev_parse(self, rev: str) -> str:
+    # We can't use Repo.rev_parse since it doesn't support
+    # short hexshas or indirect refs such as tag names or branches.
+    try:
+      hexsha = self._repo.git.rev_parse(rev)
+      return self._repo.rev_parse(hexsha)
+    except git.GitCommandError:
+      raise BossmanError("failed to resolve revision {}, please make sure it is a valid commit/tag name".format(rev))
+
   def get_paths(self, rev: str = "HEAD", predicate = true) -> list:
     """
     Lists the paths versioned for revision {rev}, optionally filtered
     by {predicate}.
     """
     try:
-      commit = self._repo.rev_parse(rev)
+      commit = self.rev_parse(rev)
     except gitdb.exc.BadName:
       raise BossmanError("This branch likely has no commits yet.")
 
@@ -285,7 +294,7 @@ class Repo:
     """
     Returns the revision {rev}, with diffs for {paths}.
     """
-    commit = self._repo.rev_parse(rev)
+    commit = self.rev_parse(rev)
     prev = git.NULL_TREE
     diffs = []
     if commit.parents:
