@@ -206,7 +206,7 @@ class ResourceType(ResourceTypeABC):
         notes.set(property_version=property_version)
       bulk_activation.add(property_id, property_version, network, [revision.author_email])
     result = self.papi.bulk_activate(bulk_activation)
-    for resource in resources:
+    for resource in sorted(resources):
       status = result.get(resource.name)
       msg = "activation of v{propertyVersion} on {network} started".format(**status)
       if status.get("taskStatus") == "SUBMISSION_ERROR":
