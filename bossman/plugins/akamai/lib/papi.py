@@ -51,7 +51,7 @@ class PAPIClient:
     property_id = cache.get_str()
     if property_id is None:
       versions = self.find_by_property_name(propertyName)
-      if len(versions) == 1:
+      if len(versions) > 0:
         property_id = str(versions[0].get("propertyId"))
         cache.update(property_id)
     return property_id
@@ -69,8 +69,10 @@ class PAPIClient:
     self.logger.debug("get_property_versions propertyId={propertyId} limit={limit} offset={offset}".format(propertyId=propertyId, limit=limit, offset=offset))
     params = dict(limit=str(limit), offset=str(offset))
     url = "/papi/v1/properties/{propertyId}/versions".format(propertyId=propertyId)
-    response = self.session.get(url, params=params)
-    return response.json().get("versions").get("items")
+    response = self.session.get(url, params=params).json()
+    meta_fields = dict((k, v) for (k, v) in response.items() if isinstance(v, (str, int)))
+    versions = list({**meta_fields, **version} for version in response.get("versions").get("items"))
+    return versions
 
   def find_latest_property_version(self, propertyId, predicate, pageSize=100, maxOffset=20):
     self.logger.debug("find_latest_property_version propertyId={propertyId}".format(propertyId=propertyId))

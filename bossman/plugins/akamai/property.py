@@ -53,14 +53,20 @@ class ResourceType(ResourceTypeABC):
 
   def get_revision_details(self, resource: ResourceABC, revision: Revision) -> RevisionDetails:
     version_number = None
-    property_id = self.papi.get_property_id(resource.name)
+    notes = revision.get_notes(resource.path)
+    property_id = notes.get("property_id")
+    if property_id is None:
+      property_id = self.papi.get_property_id(resource.name)
     if property_id is not None: # if the property exists
-      notes = revision.get_notes(resource.path)
       version_number = notes.get("property_version", None)
       if version_number is None:
         property_version = self.get_property_version_for_revision_id(property_id, revision.id)
         if property_version:
-          notes.set(property_version=property_version.get("propertyVersion"))
+          notes.set(
+            property_version=property_version.get("propertyVersion"),
+            property_id=property_version.get("propertyId"),
+            etag=property_version.get("etag")
+          )
           version_number = property_version.get("propertyVersion")
     return RevisionDetails(id=revision.id, details="v"+str(version_number) if version_number else None)
 
