@@ -111,7 +111,7 @@ class Notes:
     args = []
     if self.ns is not None:
       args.extend(("--ref", self.ns))
-    args.extend(("append", "-m", yaml.safe_dump(kwargs), self.commit.hexsha))
+    args.extend(("add", "-f", "-m", yaml.safe_dump(kwargs), self.commit.hexsha))
     self.commit.repo.git.notes(*args)
 
   def get(self, k: str, default=None):
