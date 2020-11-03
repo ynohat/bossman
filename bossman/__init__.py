@@ -18,10 +18,7 @@ class Bossman:
     except:
       raise BossmanError("An error occurred, please check that this is a git repository or working tree.")
     self.configure_repo()
-    self.resource_manager = ResourceManager()
-    for config in self.config.resource_types:
-      resource_type = ResourceTypeABC.create(config)
-      self.resource_manager.register_resource_type(resource_type)
+    self.resource_manager = ResourceManager(self.config.resource_types, self.repo)
     self.logger = get_class_logger(self)
 
   @property

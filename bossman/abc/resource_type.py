@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from bossman.config import ResourceTypeConfig
-from bossman.repo import Revision
+from bossman.repo import Repo, Revision
 from bossman.logging import logger
 from bossman.abc.resource import ResourceABC
 from bossman.repo import RevisionDetails
@@ -8,16 +8,11 @@ import parse
 from os.path import relpath, join
 
 class ResourceTypeABC(ABC):
-  @staticmethod
-  def create(config: ResourceTypeConfig):
-    import importlib
-    plugin = importlib.import_module(config.module)
-    return plugin.ResourceType(config)
-
   """
   Abstract class for resource_types.
   """
-  def __init__(self, config: ResourceTypeConfig):
+  def __init__(self, repo: Repo, config: ResourceTypeConfig):
+    self.repo = repo
     self.config = config
     self.logger = logger.getChild(
       "{module_name}.{class_name}".format(

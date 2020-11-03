@@ -8,7 +8,7 @@ from bossman.cache import cache
 from bossman.errors import BossmanError
 from bossman.abc.resource_type import ResourceTypeABC
 from bossman.abc.resource import ResourceABC
-from bossman.repo import Revision, RevisionDetails
+from bossman.repo import Repo, Revision, RevisionDetails
 from bossman.plugins.akamai.lib.papi import PAPIClient, PAPIBulkActivation
 
 RE_COMMIT = re.compile("^commit: ([a-z0-9]*)", re.MULTILINE)
@@ -43,8 +43,8 @@ class ResourceTypeOptions:
     self.switch_key = options.get("switch_key", None)
 
 class ResourceType(ResourceTypeABC):
-  def __init__(self, config):
-    super(ResourceType, self).__init__(config)
+  def __init__(self, repo: Repo, config):
+    super(ResourceType, self).__init__(repo, config)
     self.options = ResourceTypeOptions(config.options)
     self.papi = PAPIClient(self.options.edgerc, self.options.section, self.options.switch_key)
 

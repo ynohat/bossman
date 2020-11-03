@@ -1,4 +1,6 @@
+import importlib
 from types import SimpleNamespace
+from bossman.repo import Repo
 from bossman.repo import Repo
 from bossman.abc.resource_type import ResourceTypeABC
 from bossman.abc.resource import ResourceABC
@@ -18,11 +20,12 @@ class ResourceStatus:
     )
 
 class ResourceManager:
-  def __init__(self):
+  def __init__(self, resource_type_configs, repo: Repo):
     self.resource_types = list()
-
-  def register_resource_type(self, resource_type: ResourceTypeABC):
-    self.resource_types.append(resource_type)
+    for config in resource_type_configs:
+      plugin = importlib.import_module(config.module)
+      self.resource_types.append(plugin.ResourceType(repo, config))
+    self.repo = repo
 
   def get_resource_type(self, path: str) -> ResourceTypeABC:
     for resource_type in self.resource_types:
