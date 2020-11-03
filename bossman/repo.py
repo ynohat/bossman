@@ -281,6 +281,7 @@ class Repo:
     Returns the last revision in {rev}'s ancestry to have affected {paths}.
     """
     try:
+      rev = self.rev_parse(rev)
       commit = next(self._repo.iter_commits(rev, paths=paths))
       prev = git.NULL_TREE
       if commit.parents:
