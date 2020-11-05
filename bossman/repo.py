@@ -108,26 +108,36 @@ class Notes:
     self.ns = ns.strip("/")
 
   def set(self, **kwargs):
-    args = []
-    if self.ns is not None:
-      args.extend(("--ref", self.ns))
-    args.extend(("add", "-f", "-m", yaml.safe_dump(kwargs), self.commit.hexsha))
-    self.commit.repo.git.notes(*args)
+    notes = self.read()
+    notes.update(kwargs)
+    self.write(notes)
 
   def get(self, k: str, default=None):
-    raw = self.read()
-    notes = yaml.safe_load(raw if raw else '{}')
+    notes = self.read()
     return notes.get(k, default)
 
-  def read(self):
-    args = []
-    if self.ns is not None:
-      args.extend(("--ref", self.ns))
-    args.extend(("show", self.commit.hexsha))
+  def read(self) -> dict:
     try:
-      return self.commit.repo.git.notes(*args)
+      args = []
+      if self.ns is not None:
+        args.extend(("--ref", self.ns))
+      args.extend(("show", self.commit.hexsha))
+      notes = self.commit.repo.git.notes(*args)
+      return yaml.safe_load(notes if notes else '{}')
     except git.GitCommandError:
-      return None
+      return {}
+
+  def write(self, notes):
+    try:
+      args = []
+      if self.ns is not None:
+        args.extend(("--ref", self.ns))
+      args.extend(("add", "-f", "-m", yaml.safe_dump(notes), self.commit.hexsha))
+      self.commit.repo.git.notes(*args)
+    except git.GitCommandError as err:
+      raise BossmanError(err)
+
+
 
 class Revision:
   def __init__(self, commit: git.Commit, diffs: git.Diff):
@@ -302,6 +312,9 @@ class Repo:
       prev = commit.parents[0]
       diffs = commit.diff(prev, paths=paths, R=True) # R=True -> reverse
     return Revision(commit, diffs)
+
+  def get_current_branch(self):
+    return self._repo.head.ref.name
 
   def get_revisions(self, since_rev: str = None, until_rev: str = "HEAD",  paths: list = None) -> list:
     """

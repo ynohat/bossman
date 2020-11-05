@@ -5,20 +5,6 @@ from bossman.repo import Repo
 from bossman.abc.resource_type import ResourceTypeABC
 from bossman.abc.resource import ResourceABC
 
-class ResourceStatus:
-  def __init__(self, last_revision, last_revision_details, dirty, missing_revisions):
-    self.last_revision = last_revision
-    self.last_revision_details = last_revision_details
-    self.dirty = dirty
-    self.missing_revisions = missing_revisions
-
-  def __str__(self):
-    return "last_revision={last_revision} dirty={dirty} changes={changes}".format(
-      last_revision=self.last_revision.id,
-      dirty=self.dirty,
-      changes=len(self.missing_revisions)
-    )
-
 class ResourceManager:
   def __init__(self, resource_type_configs, repo: Repo):
     self.resource_types = list()

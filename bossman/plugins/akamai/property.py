@@ -1,12 +1,15 @@
 import re
 import json
+from io import StringIO
 from os import getenv
 from os.path import expanduser, basename, dirname, join
+from collections import OrderedDict
 import jsonschema
 
 from bossman.cache import cache
 from bossman.errors import BossmanError
 from bossman.abc.resource_type import ResourceTypeABC
+from bossman.abc.resource_status import ResourceStatusABC
 from bossman.abc.resource import ResourceABC
 from bossman.repo import Repo, Revision, RevisionDetails
 from bossman.plugins.akamai.lib.papi import PAPIClient, PAPIBulkActivation
@@ -21,7 +24,11 @@ class PropertyError(BossmanError):
 class PropertyResource(ResourceABC):
   def __init__(self, path, **kwargs):
     super(PropertyResource, self).__init__(path)
-    self.name = kwargs.get("name")
+    self.__name = kwargs.get("name")
+
+  @property
+  def name(self):
+    return self.__name
 
   @property
   def rules_path(self):
@@ -35,6 +42,105 @@ class PropertyResource(ResourceABC):
   def paths(self):
     return (self.rules_path, self.hostnames_path)
 
+  def __rich__(self):
+    prefix = self.path.rstrip("/").replace(self.name, "")
+    return "[grey37]{}[/][yellow]{}[/]".format(prefix, self.name)
+
+class PropertyVersionComments:
+  @staticmethod
+  def from_revision(revision: Revision):
+    comments = StringIO()
+    comments.write(revision.message.strip())
+    comments.write("\n\n")
+    comments.write("commit: {}".format(revision.id))
+    comments.write("branch: {}".format(", ".join(revision.branches)))
+    comments.write("author: {} <{}>".format(revision.author_name, revision.author_email))
+    comments.write("committer: {} <{}>".format(revision.commit.committer.name, revision.commit.committer.email))
+    return PropertyVersionComments(comments.getvalue())
+
+  def __init__(self, comments: str):
+    parts = comments.strip().rsplit("\n\n", 1)
+    self.message = parts[0]
+    self.metadata = (OrderedDict(re.findall(r"^([^:]+):\s*(.*)$", parts[1], re.MULTILINE))
+      if len(parts) == 2
+      else {})
+
+  def __str__(self) -> str:
+    return "{}\n\n{}".format(
+      self.message,
+      "\n".join(
+        "{}: {}".format(k, v)
+        for k, v in self.metadata.items()
+      )
+    )
+
+  @property
+  def commit(self):
+    return self.metadata.get("commit", None)
+
+  @property
+  def subject_line(self):
+    return self.message.split("\n")[0][:72] # 72 chars matches GitHub guidance
+
+  @property
+  def branch(self):
+    return self.metadata.get("branch", None)
+
+  @property
+  def author(self):
+    return self.metadata.get("author", None)
+
+  @property
+  def committer(self):
+    return self.metadata.get("committer", None)
+
+class PropertyResourceStatus(ResourceStatusABC):
+  def __init__(self, resource: PropertyResource, versions: list):
+    self.resource = resource
+    self.versions = sorted(versions, key=lambda v: int(v.get("propertyVersion")), reverse=True)
+
+  @property
+  def exists(self):
+    return len(self.versions) > 0
+
+  @property
+  def dirty(self) -> bool:
+    if self.exists:
+      comments = PropertyVersionComments(self.versions[0].get("note", ""))
+      if comments.commit:
+        return False
+    return True
+
+  def __rich_console__(self, *args, **kwargs):
+    if len(self.versions) == 0:
+      yield "[gray31]not found[/]"
+    else:
+      for version in self.versions:
+        parts = []
+        comments = PropertyVersionComments(version.get("note", ""))
+
+        networks = []
+        for network in ("production", "staging"):
+          color = "green" if network == "production" else "magenta"
+          alias  = re.sub("[aeiou]", "", network)[:3].upper()
+          networkStatusField = "{}Status".format(network)
+          networkStatus = version.get(networkStatusField)
+          statusIndicator = ""
+          if networkStatus == "PENDING":
+            statusIndicator = ":hourglass:"
+          if networkStatus in ("ACTIVE", "PENDING"):
+            networks.append("[bold {}]{}{}[/]".format(color, alias,  statusIndicator))
+        if len(networks):
+          parts.append(r"\[" + ",".join(networks) + "]")
+
+        version_map = (
+          "v{} : {}".format(version.get("propertyVersion"), comments.commit)
+          if comments.commit
+          else "v{} :red_circle:".format(version.get("propertyVersion"))
+        )
+        parts.append(r'[bright_white]"{subject_line}"[/] [gray]({version})[/]'.format(subject_line=comments.subject_line, version=version_map))
+
+        yield " ".join(parts)
 
 class ResourceTypeOptions:
   def __init__(self, options):
@@ -50,6 +156,15 @@ class ResourceType(ResourceTypeABC):
 
   def create_resource(self, path: str, **kwargs):
     return PropertyResource(path, **kwargs)
+
+  def get_resource_status(self, resource: PropertyResource):
+    versions = self.papi.find_by_property_name(resource.name)
+    return PropertyResourceStatus(resource, versions)
+
+  def is_applied(self, resource: PropertyResource, revision: Revision):
+    notes = revision.get_notes(resource.path)
+    property_version = notes.get("property_version", None)
+    return property_version is not None
 
   def get_revision_details(self, resource: ResourceABC, revision: Revision) -> RevisionDetails:
     version_number = None
@@ -123,7 +238,8 @@ class ResourceType(ResourceTypeABC):
       self.papi.update_property_hostnames(property_id, next_version.get("propertyVersion"), hostnames_json)
     # then, regardless of whether there was a change to the rule tree, we need to update it with
     # the commit message and id, otherwise we will get a dirty status
-    rules_json.update(comments="{}\n\ncommit: {}\nbranch: {}".format(revision.message.strip(), revision.id, ", ".join(revision.branches)))
+    comments = PropertyVersionComments.from_revision(revision)
+    rules_json.update(comments=str(comments))
     result = self.papi.update_property_rule_tree(property_id, next_version.get("propertyVersion"), rules_json)
 
     notes.set(
@@ -200,25 +316,41 @@ class ResourceType(ResourceTypeABC):
 
   def _release(self, resources: list, revision: Revision, network: str):
     bulk_activation = PAPIBulkActivation()
+    resources = sorted(resources)
     for resource in resources:
       notes = revision.get_notes(resource.path)
       property_id = notes.get("property_id")
       if property_id is None:
-        property_id = self.get_property_id(resource.name)
-        notes.set(property_id=property_id)
+        try:
+          property_id = self.get_property_id(resource.name)
+          if property_id:
+            notes.set(property_id=property_id)
+        except:
+          pass
       property_version = notes.get("property_version")
       if property_version is None:
-        property_version = self.get_property_version_for_revision_id(property_id, revision.id)
-        notes.set(property_version=property_version)
-      bulk_activation.add(property_id, property_version, network, [revision.author_email])
-    result = self.papi.bulk_activate(bulk_activation)
-    for resource in sorted(resources):
-      status = result.get(resource.name)
-      msg = "activation of v{propertyVersion} on {network} started".format(**status)
-      if status.get("taskStatus") == "SUBMISSION_ERROR":
-        fatalError = json.loads(status.get("fatalError"))
-        msg = "activation of v{propertyVersion} on {network} failed: {error}".format(error=fatalError.get("title", status.get("taskStatus")), **status)
-      print("{}: {}".format(resource.path, msg))
+        try:
+          property_version = self.get_property_version_for_revision_id(property_id, revision.id)
+          if property_version:
+            property_version = property_version.get("propertyVersion")
+            notes.set(property_version=property_version)
+        except:
+          pass
+      if property_version:
+        print("{}: {}".format(resource.path, "preparing to activate {}@{} (v{}) on {}`)".format(resource.path, revision.id, property_version, network)))
+        bulk_activation.add(property_id, property_version, network, [revision.author_email])
+      else:
+        print("{}: {}".format(resource.path, "skipping {}@{} (use `bossman apply --rev {} {}`)".format(resource.path, revision.id, revision.id, resource.path)))
+    if bulk_activation.length > 0:
+      result = self.papi.bulk_activate(bulk_activation)
+      for resource in resources:
+        status = result.get(resource.name)
+        if status is not None:
+          msg = "activation of v{propertyVersion} on {network} started".format(**status)
+          if status.get("taskStatus") == "SUBMISSION_ERROR":
+            fatalError = json.loads(status.get("fatalError"))
+            msg = "activation of v{propertyVersion} on {network} failed: {error}".format(error=fatalError.get("title", status.get("taskStatus")), **status)
+          print("{}: {}".format(resource.path, msg))
 
   def prerelease(self, resources: list, revision: Revision):
     self._release(resources, revision, "STAGING")

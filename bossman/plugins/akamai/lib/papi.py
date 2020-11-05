@@ -1,11 +1,16 @@
 import json
 import time
+import sys
 from functools import lru_cache
 from bossman.plugins.akamai.lib.edgegrid import Session
 from bossman.logging import get_class_logger
 from bossman.cache import cache
+from bossman.errors import BossmanError
 
 _cache = cache.key(__name__)
+
+class PAPIError(BossmanError):
+  pass
 
 class PAPIBulkActivation:
   def __init__(self):
@@ -20,6 +25,10 @@ class PAPIBulkActivation:
       ),
       activatePropertyVersions=[]
     )
+
+  @property
+  def length(self):
+    return len(self.payload.get("activatePropertyVersions", []))
 
   def add(self, property_id, property_version, network, notifyEmails):
     self.payload.get("activatePropertyVersions").append(dict(
@@ -142,7 +151,10 @@ class PAPIClient:
     self.logger.debug("bulk_activate bulkActivation={}".format(bulkActivation))
     url = "/papi/v1/bulk/activations"
     response = self.session.post(url, json=bulkActivation.payload)
-    bulkActivationUrl = response.json().get("bulkActivationLink")
+    if response.status_code != 202:
+      raise PAPIError(response.text)
+    response_json = response.json()
+    bulkActivationUrl = response_json.get("bulkActivationLink")
     while True:
       time.sleep(2)
       status_response = self.session.get(bulkActivationUrl)
@@ -157,5 +169,5 @@ class PAPIClient:
           fatalError=apv.get("fatalError", '{}')
         )) for apv in status_response_json.get("activatePropertyVersions"))
         return activation_statuses
+      print("patience...\r", file=sys.stderr)
     return response.json()
-

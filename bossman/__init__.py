@@ -2,7 +2,8 @@ from os.path import abspath, commonpath, join
 from fnmatch import fnmatch
 
 from bossman.errors import BossmanError
-from bossman.resources import ResourceManager, ResourceStatus
+from bossman.resources import ResourceManager
+from bossman.abc.resource_status import ResourceStatusABC
 from bossman.abc.resource_type import ResourceTypeABC
 from bossman.abc.resource import ResourceABC
 from bossman.config import Config, ResourceTypeConfig
@@ -45,7 +46,6 @@ class Bossman:
       # TODO: migration if required
       pass
     config.set_value("bossman", "version", self.version)
-    
 
   def get_resources(self, rev: str = "HEAD", glob: str = "*") -> list:
     resources = self.resource_manager.get_resources(self.repo, rev)
@@ -57,8 +57,7 @@ class Bossman:
     revisions = self.get_revisions(resources=[resource])
     missing = []
     for revision in revisions:
-      rev_details = resource_type.get_revision_details(resource, revision)
-      if rev_details.details is None:
+      if not resource_type.is_applied(resource, revision):
         missing.append(revision)
       else:
         break
@@ -68,23 +67,18 @@ class Bossman:
     resource_type = self.resource_manager.get_resource_type(resource.path)
     return resource_type.get_revision_details(resource, revision)
 
-  def get_resource_status(self, resource: ResourceABC) -> ResourceStatus:
+  def get_resource_status(self, resource: ResourceABC) -> ResourceStatusABC:
     resource_type = self.resource_manager.get_resource_type(resource.path)
-    # latest commit affecting this resource
-    last_revision = self.repo.get_last_revision(resource.paths)
-    # get info from the plugin about that revision (remote version number?)
-    last_revision_details = resource_type.get_revision_details(resource, last_revision)
-    missing_revisions = self.get_missing_revisions(resource)
-    dirty = resource_type.is_dirty(resource)
-    return ResourceStatus(
-      last_revision=last_revision,
-      last_revision_details=last_revision_details,
-      dirty=dirty,
-      missing_revisions=list(missing_revisions)
-    )
+    return resource_type.get_resource_status(resource)
 
-  def get_revision(self, rev: str = None, resources: list = None) -> str:
+  def get_revision(self, rev: str = None, resources: list = None) -> Revision:
     return self.repo.get_revision(rev, (p for r in resources for p in r.paths))
+
+  def get_head_revision(self) -> Revision:
+    return self.get_revision()
+
+  def get_current_branch(self) -> str:
+    return self.repo.get_current_branch()
 
   def get_revisions(self, since_rev: str = None, until_rev: str = "HEAD", resources: list = None) -> str:
     return self.repo.get_revisions(since_rev, until_rev, resources)

@@ -11,6 +11,10 @@ class ResourceABC(ABC):
   def paths(self):
     pass
 
+  @abstractproperty
+  def name(self):
+    pass
+
   def __eq__(self, other):
     if isinstance(other, ResourceABC):
       return self.path == other.path

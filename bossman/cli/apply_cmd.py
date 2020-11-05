@@ -18,7 +18,7 @@ def exec(bossman: Bossman, glob, force=False, **kwargs):
   for resource in resources:
     console.rule(str(resource))
     status = bossman.get_resource_status(resource)
-    missing_revisions = list(status.missing_revisions)
+    missing_revisions = bossman.get_missing_revisions(resource)
     console.print(":notebook: {} changes pending".format(len(missing_revisions)), justify="center")
     if status.dirty:
       if not force:

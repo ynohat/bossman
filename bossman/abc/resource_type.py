@@ -58,6 +58,14 @@ class ResourceTypeABC(ABC):
     pass
 
   @abstractmethod
+  def get_resource_status(self, resource: ResourceABC):
+    pass
+
+  @abstractmethod
+  def is_applied(self, resource: ResourceABC, revision: Revision) -> bool:
+    pass
+
+  @abstractmethod
   def get_revision_details(self, resource: ResourceABC, revision_id: str = None) -> RevisionDetails:
     """
     Returns plugin specific information about a given revision.
