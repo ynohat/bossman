@@ -185,19 +185,6 @@ class ResourceType(ResourceTypeABC):
           version_number = property_version.get("propertyVersion")
     return RevisionDetails(id=revision.id, details="v"+str(version_number) if version_number else None)
 
-  def is_dirty(self, resource: PropertyResource) -> bool:
-    """
-    An Akamai property is dirty if its latest version does not refer to a
-    revision in its notes.
-    """
-    is_dirty = True
-    property_id = self.papi.get_property_id(resource.name)
-    if property_id is not None:
-      property_version = self.papi.get_latest_property_version(property_id)
-      if property_version:
-        is_dirty = not bool(RE_COMMIT.search(property_version.get("note", "")))
-    return is_dirty
-
   def get_property_id(self, property_name):
     property_id = self.papi.get_property_id(property_name)
     if not property_id:

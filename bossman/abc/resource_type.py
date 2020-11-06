@@ -74,10 +74,6 @@ class ResourceTypeABC(ABC):
     pass
 
   @abstractmethod
-  def is_dirty(self, resource: ResourceABC) -> bool:
-    pass
-
-  @abstractmethod
   def apply_change(self, resource: ResourceABC, revision: Revision, previous_revision: Revision):
     pass
 
