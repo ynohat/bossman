@@ -36,6 +36,8 @@ def main():
       parser.print_usage()
   except BossmanError as err:
     print(err)
+  except KeyboardInterrupt:
+    print("\ninterrupted by the user", file=sys.stderr)
 
 def version_cmd_init(subparsers: argparse._SubParsersAction):
   parser = subparsers.add_parser("version", help="print the current version of bossman")
