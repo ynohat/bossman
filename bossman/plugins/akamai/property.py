@@ -47,7 +47,7 @@ class PropertyResource(ResourceABC):
 
   def __rich__(self):
     prefix = self.path.rstrip("/").replace(self.name, "")
-    return "[grey37]{}[/][yellow]{}[/]".format(prefix, self.name)
+    return "[grey53]{}[/][yellow]{}[/]".format(prefix, self.name)
 
 class PropertyVersionComments:
   @staticmethod
@@ -84,7 +84,8 @@ class PropertyVersionComments:
 
   @property
   def subject_line(self):
-    return self.message.split("\n")[0][:72] # 72 chars matches GitHub guidance
+    # 72 chars matches GitHub guidance, but it's a bit long for the console
+    return self.message.split("\n")[0][:40]
 
   @property
   def branch(self):
@@ -99,7 +100,8 @@ class PropertyVersionComments:
     return self.metadata.get("committer", None)
 
 class PropertyResourceStatus(ResourceStatusABC):
-  def __init__(self, resource: PropertyResource, versions: list):
+  def __init__(self, repo: Repo, resource: PropertyResource, versions: list):
+    self.repo = repo
     self.resource = resource
     self.versions = sorted(versions, key=lambda v: int(v.get("propertyVersion")), reverse=True)
 
@@ -112,7 +114,7 @@ class PropertyResourceStatus(ResourceStatusABC):
     if not self.exists:
       return False
     comments = PropertyVersionComments(self.versions[0].get("note", ""))
-    if comments.commit:
+    if comments.commit and self.repo.rev_exists(comments.commit):
       return False
     return True
 
@@ -123,6 +125,8 @@ class PropertyResourceStatus(ResourceStatusABC):
       for version in self.versions:
         parts = []
         comments = PropertyVersionComments(version.get("note", ""))
+
+        parts.append(r'[grey53]v{version}[/]'.format(version=version.get("propertyVersion")))
 
         networks = []
         for network in ("production", "staging"):
@@ -136,14 +140,33 @@ class PropertyResourceStatus(ResourceStatusABC):
           if networkStatus in ("ACTIVE", "PENDING"):
             networks.append("[bold {}]{}{}[/]".format(color, alias,  statusIndicator))
         if len(networks):
-          parts.append(r"\[" + ",".join(networks) + "]")
+          parts.append(",".join(networks))
 
-        version_map = (
-          "v{} : {}".format(version.get("propertyVersion"), comments.commit)
-          if comments.commit
-          else "v{} :red_circle:".format(version.get("propertyVersion"))
-        )
-        parts.append(r'[bright_white]"{subject_line}"[/] [gray]({version})[/]'.format(subject_line=comments.subject_line, version=version_map))
+        parts.append(r'[bright_white]"{subject_line}"[/]'.format(subject_line=comments.subject_line))
+
+        def branch_status(branch):
+          missing_revs = self.repo.get_revisions(comments.commit, branch, paths=self.resource.paths)
+          if len(missing_revs):
+            parts.append(r'[rosy_brown]\[{}~{}][/]'.format(branch, len(missing_revs)))
+          else:
+            parts.append(r'[dark_olive_green3]\[{}][/]'.format(branch))
+
+        rev_branches = self.repo.get_branches_containing(comments.commit)
+        if len(rev_branches) == 0:
+          # If the comment referenced no commit, or if the commit was not found
+          # on any branch (which is possible if history was rewritten or the branch
+          # containing that commit was dropped without being merged), indicate question mark
+          parts.append(r':question:')
+        else:
+          for branch in rev_branches:
+            branch_status(branch)
+          for tag in self.repo.get_tags_pointing_at(comments.commit):
+            parts.append(r'[dark_violet]{}[/]'.format(tag))
+
+        author = comments.author
+        if author:
+          author = author.rsplit(" ", 1)[0]
+          parts.append("[grey53]{}[/]".format(author))
 
         yield " ".join(parts)
 
@@ -163,8 +186,23 @@ class ResourceType(ResourceTypeABC):
     return PropertyResource(path, **kwargs)
 
   def get_resource_status(self, resource: PropertyResource):
+    # retrieve the latest, production and staging versions
     versions = self.papi.find_by_property_name(resource.name)
-    return PropertyResourceStatus(resource, versions)
+    # the current HEAD is also interesting since it would be (pre)released
+    # so it must show up in status
+    for branch in self.repo.get_branches():
+      head = self.repo.get_revision(branch, resource.paths)
+      # the head revision might not concern this resource
+      if head and len(head.changes):
+        notes = head.get_notes(resource.path)
+        property_id = notes.get("property_id", None)
+        property_version = notes.get("property_version", None)
+        if property_id is not None and property_version is not None:
+          is_in_versions = next((v for v in versions if v.get("propertyVersion") == property_version), False)
+          if not is_in_versions:
+            head_version = self.papi.get_property_version(property_id, property_version)
+            versions.append(head_version)
+    return PropertyResourceStatus(self.repo, resource, versions)
 
   def is_applied(self, resource: PropertyResource, revision: Revision):
     notes = revision.get_notes(resource.path)
@@ -238,6 +276,7 @@ class ResourceType(ResourceTypeABC):
         rules_json.get("contractId"),
         rules_json.get("groupId"),
       )
+      print("created property: ", resource.name, property_id)
       # If we managed to create the property, we can simply use v1
       latest_version = self.papi.get_latest_property_version(property_id)
       next_version = latest_version

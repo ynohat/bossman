@@ -140,7 +140,8 @@ class Notes:
 
 
 class Revision:
-  def __init__(self, commit: git.Commit, diffs: git.Diff):
+  def __init__(self, repo, commit: git.Commit, diffs: git.Diff):
+    self.repo = repo
     self.commit = commit
     self.changes = dict(
       (diff.b_path or diff.a_path, Change.from_diff(diff))
@@ -161,9 +162,7 @@ class Revision:
 
   @property
   def branches(self):
-    cmd = git.cmd.Git(self.commit.repo.working_tree_dir)
-    branches = cmd.branch(contains=self.id, format="%(refname:short)")
-    return branches.splitlines()
+    return self.repo.get_branches_containing(self.id)
 
   @property
   def date(self) -> datetime:
@@ -265,6 +264,26 @@ class Repo:
     except git.GitCommandError:
       raise BossmanError("failed to resolve revision {}, please make sure it is a valid commit/tag name".format(rev))
 
+  def rev_exists(self, rev: str) -> str:
+    try:
+      return isinstance(self.rev_parse(rev), git.Commit)
+    except BossmanError:
+      return False
+
+  def rev_is_reachable(self, rev: str, from_rev: str = "HEAD") -> str:
+    """
+    Returns True if {rev} is an ancestor of {from_rev}.
+    """
+    try:
+      rev = self.rev_parse(rev)
+      for parent_rev in self._repo.iter_commits(from_rev):
+        if parent_rev.hexsha == rev.hexsha:
+          return True
+      else:
+        return False
+    except BossmanError:
+      return False
+
   def get_paths(self, rev: str = "HEAD", predicate = true) -> list:
     """
     Lists the paths versioned for revision {rev}, optionally filtered
@@ -290,7 +309,7 @@ class Repo:
       if commit.parents:
         prev = commit.parents[0]
       diffs = commit.diff(prev, R=True)
-      return Revision(commit, diffs)
+      return Revision(self, commit, diffs)
     except StopIteration:
       return None
 
@@ -305,7 +324,7 @@ class Repo:
       if commit.parents:
         prev = commit.parents[0]
       diffs = commit.diff(prev, paths=paths, R=True)
-      return Revision(commit, diffs)
+      return Revision(self, commit, diffs)
     except StopIteration:
       return None
 
@@ -319,10 +338,20 @@ class Repo:
     if commit.parents:
       prev = commit.parents[0]
       diffs = commit.diff(prev, paths=paths, R=True) # R=True -> reverse
-    return Revision(commit, diffs)
+    return Revision(self, commit, diffs)
 
   def get_current_branch(self):
     return self._repo.head.ref.name
+
+  def get_branches(self) -> list:
+    return tuple(branch.name for branch in self._repo.branches)
+
+  def get_branches_containing(self, rev: str) -> list:
+    try:
+      result = self._repo.git.branch(contains=rev, format="%(refname:short)")
+      return result.splitlines()
+    except git.GitCommandError:
+      return []
 
   def get_revisions(self, since_rev: str = None, until_rev: str = "HEAD",  paths: list = None) -> list:
     """
@@ -340,5 +369,13 @@ class Repo:
         prev = commit.parents[0]
       diffs = commit.diff(prev, paths=paths, R=True) # R=True -> reverse
       if len(diffs):
-        revisions.append(Revision(commit, diffs))
+        revisions.append(Revision(self, commit, diffs))
     return revisions
+
+  def get_tags_pointing_at(self, rev="HEAD") -> list:
+    try:
+      rev = self.rev_parse(rev)
+      result = self._repo.git.tag(points_at=rev)
+      return result.splitlines()
+    except BossmanError:
+      return []

@@ -47,7 +47,7 @@ class PAPIClient:
     self.session = Session(edgerc, section, switch_key=switch_key, **kwargs)
 
   @lru_cache(maxsize=1000)
-  def find_by_property_name(self, propertyName):
+  def find_by_property_name(self, propertyName) -> list:
     self.logger.debug("find_by_property_name propertyName={propertyName}".format(propertyName=propertyName))
     response = self.session.post("/papi/v1/search/find-by-value", json={"propertyName": propertyName})
     self.logger.debug("find_by_property_name response={response}".format(response=response.content))
@@ -72,6 +72,12 @@ class PAPIClient:
       params["activatedOn"] = network
     url = "/papi/v1/properties/{propertyId}/versions/latest".format(propertyId=propertyId)
     response = self.session.get(url, params=params)
+    return response.json().get("versions").get("items")[0]
+
+  def get_property_version(self, propertyId, propertyVersion):
+    self.logger.debug("get_property_version propertyId={propertyId} propertyVersion={propertyVersion}".format(propertyId=propertyId, propertyVersion=propertyVersion))
+    url = "/papi/v1/properties/{propertyId}/versions/{propertyVersion}".format(propertyId=propertyId, propertyVersion=propertyVersion)
+    response = self.session.get(url)
     return response.json().get("versions").get("items")[0]
 
   def get_property_versions(self, propertyId, limit=500, offset=0):
@@ -170,6 +176,7 @@ class PAPIClient:
       raise PAPIError(response.text)
     response_json = response.json()
     bulkActivationUrl = response_json.get("bulkActivationLink")
+    patience = 3 # number of points to print
     while True:
       time.sleep(2)
       status_response = self.session.get(bulkActivationUrl)
@@ -183,6 +190,8 @@ class PAPIClient:
           network=apv.get("network"),
           fatalError=apv.get("fatalError", '{}')
         )) for apv in status_response_json.get("activatePropertyVersions"))
+        sys.stderr.write("\n")
         return activation_statuses
-      print("patience...\r", file=sys.stderr)
+      sys.stderr.write("\rpatience{}".format("." * patience))
+      patience += 1
     return response.json()
