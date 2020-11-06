@@ -98,6 +98,21 @@ class PAPIClient:
         continue
     return None
 
+  def create_property(self, propertyName, productId, ruleFormat, contractId, groupId) -> str:
+    self.logger.debug("create_property propertyName={propertyName} contractId={contractId} groupId={groupId}".format(propertyName=propertyName, contractId=contractId, groupId=groupId))
+    url = "/papi/v1/properties"
+    response = self.session.post(url, params=dict(contractId=contractId, groupId=groupId), json=dict(
+      propertyName=propertyName,
+      productId=productId,
+      ruleFormat=ruleFormat,
+      contractId=contractId,
+      groupId=groupId,
+    ))
+    if response.status_code != 201:
+      raise BossmanError(response.text)
+    property_resp = self.session.get(response.headers["Location"])
+    return property_resp.json().get("propertyId")
+
   def create_property_version(self, propertyId, baseVersion, baseVersionEtag = None):
     self.logger.debug("create_property_version propertyId={propertyId} baseVersion={baseVersion}".format(propertyId=propertyId, baseVersion=baseVersion))
     data = dict(createFromVersion=baseVersion)

@@ -21,6 +21,9 @@ _cache = cache.key(__name__)
 class PropertyError(BossmanError):
   pass
 
+class PropertyNotFoundError(BossmanError):
+  pass
+
 class PropertyResource(ResourceABC):
   def __init__(self, path, **kwargs):
     super(PropertyResource, self).__init__(path)
@@ -52,10 +55,11 @@ class PropertyVersionComments:
     comments = StringIO()
     comments.write(revision.message.strip())
     comments.write("\n\n")
-    comments.write("commit: {}".format(revision.id))
-    comments.write("branch: {}".format(", ".join(revision.branches)))
-    comments.write("author: {} <{}>".format(revision.author_name, revision.author_email))
-    comments.write("committer: {} <{}>".format(revision.commit.committer.name, revision.commit.committer.email))
+    comments.write("commit: {}\n".format(revision.id))
+    comments.write("branch: {}\n".format(", ".join(revision.branches)))
+    comments.write("author: {} <{}>\n".format(revision.author_name, revision.author_email))
+    if revision.author_email != revision.committer_email:
+      comments.write("committer: {} <{}>\n".format(revision.commit.committer.name, revision.commit.committer.email))
     return PropertyVersionComments(comments.getvalue())
 
   def __init__(self, comments: str):
@@ -105,10 +109,11 @@ class PropertyResourceStatus(ResourceStatusABC):
 
   @property
   def dirty(self) -> bool:
-    if self.exists:
-      comments = PropertyVersionComments(self.versions[0].get("note", ""))
-      if comments.commit:
-        return False
+    if not self.exists:
+      return False
+    comments = PropertyVersionComments(self.versions[0].get("note", ""))
+    if comments.commit:
+      return False
     return True
 
   def __rich_console__(self, *args, **kwargs):
@@ -188,37 +193,54 @@ class ResourceType(ResourceTypeABC):
   def get_property_id(self, property_name):
     property_id = self.papi.get_property_id(property_name)
     if not property_id:
-      raise PropertyError(property_name, "not found")
+      raise PropertyNotFoundError(property_name, "not found")
     return property_id
 
   def apply_change(self, resource: PropertyResource, revision: Revision, previous_revision: Revision=None):
     # we should only call this function if the Revision concerns the resource
     assert len(set(resource.paths).intersection(revision.affected_paths)) > 0
 
-    property_id = self.get_property_id(resource.name)
-
-    notes = revision.get_notes(resource.path)
-
-    latest_version = None
-    # if previous_revision was provided, we can figure out the property version to base
-    # the new version on
-    if previous_revision:
-      latest_version = self.get_property_version_for_revision_id(property_id, previous_revision.id)
-    # if we failed to figure out the version from a previous revision, we use the latest
-    if not latest_version:
-      latest_version = self.papi.get_latest_property_version(property_id)
+    # Get the rules json from the commit
+    rules = revision.show_path(resource.rules_path)
+    if rules is None:
+      raise PropertyError("missing rule tree")
 
     # before changing anything in PAPI, check that the json files are valid
-    rules = revision.show_path(resource.rules_path)
     rules_json = self.validate_rules(resource, rules)
     hostnames_json = None
     if resource.hostnames_path in revision.affected_paths:
       hostnames = revision.show_path(resource.hostnames_path)
       hostnames_json = self.validate_hostnames(resource, hostnames)
 
-    # now we can create the new version in PAPI
-    next_version = self.papi.create_property_version(property_id, latest_version.get("propertyVersion"))
-    print("created new version: ", next_version.get("propertyVersion"), "for rev", revision.id, revision.message)
+    latest_version = next_version = None
+
+    try:
+      property_id = self.get_property_id(resource.name)
+      # If previous_revision was provided and this is not a new property, we can
+      # figure out the property version to base the new version on
+      if previous_revision:
+        latest_version = self.get_property_version_for_revision_id(property_id, previous_revision.id)
+      # if we failed to figure out the version from a previous revision, we use the latest
+      if not latest_version:
+        latest_version = self.papi.get_latest_property_version(property_id)
+      # now we can create the new version in PAPI
+      next_version = self.papi.create_property_version(property_id, latest_version.get("propertyVersion"))
+      print("created new version: ", next_version.get("propertyVersion"), "for rev", revision.id, revision.message)
+    except PropertyNotFoundError:
+      requiredForCreate = ("groupId", "contractId", "ruleFormat", "productId")
+      missing = list(field for field in requiredForCreate if field not in rules_json)
+      if len(missing):
+        raise PropertyError("missing fields in {}: {}".format(resource.rules_path, ", ".join(missing)))
+      property_id = self.papi.create_property(
+        resource.name,
+        rules_json.get("productId"),
+        rules_json.get("ruleFormat"),
+        rules_json.get("contractId"),
+        rules_json.get("groupId"),
+      )
+      # If we managed to create the property, we can simply use v1
+      latest_version = self.papi.get_latest_property_version(property_id)
+      next_version = latest_version
 
     # first, we apply the hostnames change
     if hostnames_json:
@@ -229,7 +251,8 @@ class ResourceType(ResourceTypeABC):
     rules_json.update(comments=str(comments))
     result = self.papi.update_property_rule_tree(property_id, next_version.get("propertyVersion"), rules_json)
 
-    notes.set(
+    # Finally, assign the updated values to the git notes
+    revision.get_notes(resource.path).set(
       property_version=result.get("propertyVersion"),
       property_id=result.get("propertyId"),
       etag=result.get("etag")

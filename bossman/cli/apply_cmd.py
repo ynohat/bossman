@@ -20,7 +20,7 @@ def exec(bossman: Bossman, glob, force=False, **kwargs):
     status = bossman.get_resource_status(resource)
     missing_revisions = bossman.get_missing_revisions(resource)
     console.print(":notebook: {} changes pending".format(len(missing_revisions)), justify="center")
-    if status.dirty:
+    if len(missing_revisions) and status.dirty:
       if not force:
         console.print(":stop_sign: [magenta]dirty, skipping[/magenta] :stop_sign:", justify="center")
         continue
@@ -28,6 +28,11 @@ def exec(bossman: Bossman, glob, force=False, **kwargs):
         console.print(":exclamation_mark: [red]dirty, force applying[/red] :exclamation_mark:", justify="center")
     for (idx, revision) in enumerate(missing_revisions):
       console.print(Panel(revision, title="{}/{}".format(idx+1, len(missing_revisions))))
-      bossman.apply_change(resource, revision)
+      try:
+        bossman.apply_change(resource, revision)
+      except RuntimeError as e:
+        if not force:
+          raise e
+        console.print(":exclamation_mark: The following error occurred: {}. Continuing (--force)".format(e))
   else:
     console.print(":cookie: [green]all done[green] :cookie:", justify="center")

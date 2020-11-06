@@ -186,6 +186,14 @@ class Revision:
     return self.commit.author.email
 
   @property
+  def committer_name(self) -> str:
+    return self.commit.committer.name
+
+  @property
+  def committer_email(self) -> str:
+    return self.commit.committer.email
+
+  @property
   def affected_paths(self) -> list:
     return self.changes.keys()
 
