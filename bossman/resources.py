@@ -2,8 +2,8 @@ import importlib
 from types import SimpleNamespace
 from bossman.repo import Repo
 from bossman.repo import Repo
-from bossman.abc.resource_type import ResourceTypeABC
-from bossman.abc.resource import ResourceABC
+from bossman.abc import ResourceTypeABC
+from bossman.abc import ResourceABC
 
 class ResourceManager:
   def __init__(self, resource_type_configs, repo: Repo):

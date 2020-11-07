@@ -1,11 +1,65 @@
-from abc import ABC, abstractmethod
+from abc import ABC, abstractproperty, abstractmethod
 from bossman.config import ResourceTypeConfig
 from bossman.repo import Repo, Revision
 from bossman.logging import logger
-from bossman.abc.resource import ResourceABC
 from bossman.repo import RevisionDetails
 import parse
 from os.path import relpath, join
+
+class ResourceABC(ABC):
+  """
+  A {ResourceABC} is just a thing that lives at a path.
+  """
+  def __init__(self, path):
+    self.path = path
+
+  @abstractproperty
+  def paths(self):
+    pass
+
+  @abstractproperty
+  def name(self):
+    pass
+
+  def __eq__(self, other):
+    if isinstance(other, ResourceABC):
+      return self.path == other.path
+    return False
+
+  def __lt__(self, other):
+    if isinstance(other, ResourceABC):
+      return self.path < other.path
+    return False
+
+  def __hash__(self):
+    return hash(self.path)
+
+  def __str__(self):
+    return self.path
+
+  def __rich__(self):
+    return "[yellow]{path}[/yellow]".format(path=self.path)
+
+
+
+class ResourceStatusABC(ABC):
+  @abstractproperty
+  def exists(self) -> bool:
+    """
+    Return True if the resource exists, False if it is only in git.
+    """
+    pass
+
+  @abstractproperty
+  def dirty(self) -> bool:
+    """
+    Return True if the resource has a remote state that has diverged
+    from the state known by bossman. If True, `apply --force` will
+    be required when deploying a new revision.
+    """
+    pass
+
+
 
 class ResourceTypeABC(ABC):
   """
@@ -84,3 +138,4 @@ class ResourceTypeABC(ABC):
   @abstractmethod
   def prerelease(self, resources: list, revision: Revision):
     pass
+

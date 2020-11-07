@@ -3,9 +3,9 @@ from fnmatch import fnmatch
 
 from bossman.errors import BossmanError
 from bossman.resources import ResourceManager
-from bossman.abc.resource_status import ResourceStatusABC
-from bossman.abc.resource_type import ResourceTypeABC
-from bossman.abc.resource import ResourceABC
+from bossman.abc import ResourceStatusABC
+from bossman.abc import ResourceTypeABC
+from bossman.abc import ResourceABC
 from bossman.config import Config, ResourceTypeConfig
 from bossman.logging import get_class_logger
 from bossman.repo import Repo, Revision, Change

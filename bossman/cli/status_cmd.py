@@ -4,7 +4,7 @@ import argparse
 from rich import print, box
 from rich.table import Table
 from bossman import Bossman
-from bossman.abc.resource_status import ResourceStatusABC
+from bossman.abc import ResourceStatusABC
 
 def init(subparsers: argparse._SubParsersAction):
   parser = subparsers.add_parser("status", help="show resource status")

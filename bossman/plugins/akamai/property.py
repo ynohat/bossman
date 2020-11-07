@@ -8,9 +8,9 @@ import jsonschema
 
 from bossman.cache import cache
 from bossman.errors import BossmanError
-from bossman.abc.resource_type import ResourceTypeABC
-from bossman.abc.resource_status import ResourceStatusABC
-from bossman.abc.resource import ResourceABC
+from bossman.abc import ResourceTypeABC
+from bossman.abc import ResourceStatusABC
+from bossman.abc import ResourceABC
 from bossman.repo import Repo, Revision, RevisionDetails
 from bossman.plugins.akamai.lib.papi import PAPIClient, PAPIBulkActivation
 
