@@ -93,18 +93,12 @@ class ResourceTypeABC(ABC):
     )
 
   def match(self, path: str) -> bool:
-    result = parse.search(self.config.pattern, path)
-    if result:
-      canonical = self.config.pattern.format(**result.named)
-      return path.startswith(canonical)
-    return False
+    return self.config.pattern.match(path) is not None
 
   def get_resource(self, path: str) -> ResourceABC:
-    result = parse.search(self.config.pattern, path)
-    if result:
-      canonical = self.config.pattern.format(**result.named)
-      if path.startswith(canonical):
-        return self.create_resource(canonical, **result.named)
+    match = self.config.pattern.match(path)
+    if match is not None:
+      return self.create_resource(match.canonical, **match.values)
     return None
 
   @abstractmethod

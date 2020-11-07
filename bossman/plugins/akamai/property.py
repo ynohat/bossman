@@ -46,7 +46,7 @@ class PropertyResource(ResourceABC):
     return (self.rules_path, self.hostnames_path)
 
   def __rich__(self):
-    prefix = self.path.rstrip("/").replace(self.name, "")
+    prefix = self.path.replace(self.name, "")
     return "[grey53]{}[/][yellow]{}[/]".format(prefix, self.name)
 
 class PropertyVersionComments:
