@@ -12,7 +12,7 @@ from bossman.abc import ResourceTypeABC
 from bossman.abc import ResourceStatusABC
 from bossman.abc import ResourceABC
 from bossman.repo import Repo, Revision, RevisionDetails
-from bossman.plugins.akamai.lib.papi import PAPIClient, PAPIBulkActivation
+from bossman.plugins.akamai.lib.papi import PAPIClient, PAPIPropertyVersion, PAPIBulkActivation
 
 RE_COMMIT = re.compile("^commit: ([a-z0-9]*)", re.MULTILINE)
 
@@ -99,11 +99,17 @@ class PropertyVersionComments:
   def committer(self):
     return self.metadata.get("committer", None)
 
-class PropertyResourceStatus(ResourceStatusABC):
+class PropertyVersionStatus:
+  def __init__(self, repo: Repo, resource: PropertyResource, version: PAPIPropertyVersion):
+    self.repo = repo
+    self.resource = resource
+    self.version = version
+
+class PropertyStatus(ResourceStatusABC):
   def __init__(self, repo: Repo, resource: PropertyResource, versions: list):
     self.repo = repo
     self.resource = resource
-    self.versions = sorted(versions, key=lambda v: int(v.get("propertyVersion")), reverse=True)
+    self.versions = sorted(versions, key=lambda v: int(v.propertyVersion), reverse=True)
 
   @property
   def exists(self):
@@ -124,16 +130,16 @@ class PropertyResourceStatus(ResourceStatusABC):
     else:
       for version in self.versions:
         parts = []
-        comments = PropertyVersionComments(version.get("note", ""))
+        comments = PropertyVersionComments(version.note)
 
-        parts.append(r'[grey53]v{version}[/]'.format(version=version.get("propertyVersion")))
+        parts.append(r'[grey53]v{version}[/]'.format(version=version.propertyVersion))
 
         networks = []
         for network in ("production", "staging"):
           color = "green" if network == "production" else "magenta"
           alias  = re.sub("[aeiou]", "", network)[:3].upper()
           networkStatusField = "{}Status".format(network)
-          networkStatus = version.get(networkStatusField)
+          networkStatus = getattr(version, networkStatusField)
           statusIndicator = ""
           if networkStatus == "PENDING":
             statusIndicator = ":hourglass:"
@@ -186,23 +192,28 @@ class ResourceType(ResourceTypeABC):
     return PropertyResource(path, **kwargs)
 
   def get_resource_status(self, resource: PropertyResource):
-    # retrieve the latest, production and staging versions
-    versions = self.papi.find_by_property_name(resource.name)
-    # the current HEAD is also interesting since it would be (pre)released
-    # so it must show up in status
-    for branch in self.repo.get_branches():
-      head = self.repo.get_revision(branch, resource.paths)
-      # the head revision might not concern this resource
-      if head and len(head.changes):
+    prop = self.papi.get_property(resource.name)
+
+    interesting_versions = set()
+    versions = []
+
+    if prop is not None:
+      interesting_versions.add(prop.stagingVersion)
+      interesting_versions.add(prop.productionVersion)
+      interesting_versions.add(prop.latestVersion)
+      for branch in self.repo.get_branches():
+        head = self.repo.get_revision(branch, resource.paths)
         notes = head.get_notes(resource.path)
-        property_id = notes.get("property_id", None)
-        property_version = notes.get("property_version", None)
-        if property_id is not None and property_version is not None:
-          is_in_versions = next((v for v in versions if v.get("propertyVersion") == property_version), False)
-          if not is_in_versions:
-            head_version = self.papi.get_property_version(property_id, property_version)
-            versions.append(head_version)
-    return PropertyResourceStatus(self.repo, resource, versions)
+        v = notes.get("property_version", None)
+        if v is not None:
+          interesting_versions.add(v)
+
+      for iv in interesting_versions:
+        pv = self.papi.get_property_version(prop.propertyId, iv)
+        if pv is not None:
+          versions.append(pv)
+
+    return PropertyStatus(self.repo, resource, versions)
 
   def is_applied(self, resource: PropertyResource, revision: Revision):
     notes = revision.get_notes(resource.path)
@@ -210,22 +221,8 @@ class ResourceType(ResourceTypeABC):
     return property_version is not None
 
   def get_revision_details(self, resource: ResourceABC, revision: Revision) -> RevisionDetails:
-    version_number = None
     notes = revision.get_notes(resource.path)
-    property_id = notes.get("property_id")
-    if property_id is None:
-      property_id = self.papi.get_property_id(resource.name)
-    if property_id is not None: # if the property exists
-      version_number = notes.get("property_version", None)
-      if version_number is None:
-        property_version = self.get_property_version_for_revision_id(property_id, revision.id)
-        if property_version:
-          notes.set(
-            property_version=property_version.get("propertyVersion"),
-            property_id=property_version.get("propertyId"),
-            etag=property_version.get("etag")
-          )
-          version_number = property_version.get("propertyVersion")
+    version_number = notes.get("property_version", None)
     return RevisionDetails(id=revision.id, details="v"+str(version_number) if version_number else None)
 
   def get_property_id(self, property_name):
@@ -262,8 +259,8 @@ class ResourceType(ResourceTypeABC):
       if not latest_version:
         latest_version = self.papi.get_latest_property_version(property_id)
       # now we can create the new version in PAPI
-      next_version = self.papi.create_property_version(property_id, latest_version.get("propertyVersion"))
-      print("created new version: ", next_version.get("propertyVersion"), "for rev", revision.id, revision.message)
+      next_version = self.papi.create_property_version(property_id, latest_version.propertyVersion)
+      print("created new version: ", next_version.propertyVersion, "for rev", revision.id, revision.message)
     except PropertyNotFoundError:
       requiredForCreate = ("groupId", "contractId", "ruleFormat", "productId")
       missing = list(field for field in requiredForCreate if field not in rules_json)
@@ -283,18 +280,18 @@ class ResourceType(ResourceTypeABC):
 
     # first, we apply the hostnames change
     if hostnames_json:
-      self.papi.update_property_hostnames(property_id, next_version.get("propertyVersion"), hostnames_json)
+      self.papi.update_property_hostnames(property_id, next_version.propertyVersion, hostnames_json)
     # then, regardless of whether there was a change to the rule tree, we need to update it with
     # the commit message and id, otherwise we will get a dirty status
     comments = PropertyVersionComments.from_revision(revision)
     rules_json.update(comments=str(comments))
-    result = self.papi.update_property_rule_tree(property_id, next_version.get("propertyVersion"), rules_json)
+    result = self.papi.update_property_rule_tree(property_id, next_version.propertyVersion, rules_json)
 
     # Finally, assign the updated values to the git notes
     revision.get_notes(resource.path).set(
-      property_version=result.get("propertyVersion"),
-      property_id=result.get("propertyId"),
-      etag=result.get("etag")
+      property_version=result.propertyVersion,
+      property_id=result.propertyId,
+      etag=result.etag
     )
 
   def get_property_version_for_revision_id(self, property_id, revision_id):
@@ -369,22 +366,7 @@ class ResourceType(ResourceTypeABC):
     for resource in resources:
       notes = revision.get_notes(resource.path)
       property_id = notes.get("property_id")
-      if property_id is None:
-        try:
-          property_id = self.get_property_id(resource.name)
-          if property_id:
-            notes.set(property_id=property_id)
-        except:
-          pass
       property_version = notes.get("property_version")
-      if property_version is None:
-        try:
-          property_version = self.get_property_version_for_revision_id(property_id, revision.id)
-          if property_version:
-            property_version = property_version.get("propertyVersion")
-            notes.set(property_version=property_version)
-        except:
-          pass
       if property_version:
         print("{}: {}".format(resource.path, "preparing to activate {}@{} (v{}) on {}`)".format(resource.path, revision.id, property_version, network)))
         bulk_activation.add(property_id, property_version, network, [revision.author_email])

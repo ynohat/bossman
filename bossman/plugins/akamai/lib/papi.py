@@ -12,6 +12,42 @@ _cache = cache.key(__name__)
 class PAPIError(BossmanError):
   pass
 
+class PAPIProperty:
+  def __init__(self, **kwargs):
+    self.accountId = kwargs.get("accountId")
+    self.contractId = kwargs.get("contractId")
+    self.groupId = kwargs.get("groupId")
+    self.propertyId = kwargs.get("propertyId")
+    self.propertyName = kwargs.get("propertyName")
+    self.latestVersion = kwargs.get("latestVersion")
+    self.productionVersion = kwargs.get("productionVersion")
+    self.stagingVersion = kwargs.get("stagingVersion")
+
+
+class PAPIPropertyVersion:
+  def __init__(self, **kwargs):
+    self.accountId = kwargs.get("accountId")
+    self.contractId = kwargs.get("contractId")
+    self.groupId = kwargs.get("groupId")
+    self.propertyId = kwargs.get("propertyId")
+    self.propertyName = kwargs.get("propertyName")
+    self.propertyVersion = kwargs.get("propertyVersion")
+    self.etag = kwargs.get("etag")
+    self.note = kwargs.get("note")
+    self.productionStatus = kwargs.get("productionStatus")
+    self.stagingStatus = kwargs.get("stagingStatus")
+
+class PAPIPropertyVersionRuleTree:
+  def __init__(self, **kwargs):
+    self.accountId = kwargs.get("accountId")
+    self.contractId = kwargs.get("contractId")
+    self.groupId = kwargs.get("groupId")
+    self.propertyId = kwargs.get("propertyId")
+    self.propertyVersion = kwargs.get("propertyVersion")
+    self.etag = kwargs.get("etag")
+    self.rules = kwargs.get("rules")
+
+
 class PAPIBulkActivation:
   def __init__(self):
     self.payload = dict(
@@ -46,63 +82,74 @@ class PAPIClient:
     self.logger = get_class_logger(self)
     self.session = Session(edgerc, section, switch_key=switch_key, **kwargs)
 
-  @lru_cache(maxsize=1000)
-  def find_by_property_name(self, propertyName) -> list:
-    self.logger.debug("find_by_property_name propertyName={propertyName}".format(propertyName=propertyName))
-    response = self.session.post("/papi/v1/search/find-by-value", json={"propertyName": propertyName})
-    self.logger.debug("find_by_property_name response={response}".format(response=response.content))
-    versions = response.json().get("versions").get("items")
-    return versions
-
   def get_property_id(self, propertyName):
     self.logger.debug("get_property_id propertyName={propertyName}".format(propertyName=propertyName))
     cache = _cache.key("property_id", propertyName)
     property_id = cache.get_str()
     if property_id is None:
-      versions = self.find_by_property_name(propertyName)
+      response = self.session.post("/papi/v1/search/find-by-value", json={"propertyName": propertyName})
+      versions = list(PAPIPropertyVersion(**item) for item in response.json().get("versions").get("items"))
       if len(versions) > 0:
-        property_id = str(versions[0].get("propertyId"))
+        property_id = str(versions[0].propertyId)
         cache.update(property_id)
     return property_id
 
-  def get_latest_property_version(self, propertyId, network=None):
+  def get_property(self, propertyName) -> PAPIProperty:
+    self.logger.debug("get_property propertyName={propertyName}".format(propertyName=propertyName))
+    property_id = self.get_property_id(propertyName)
+    if not property_id:
+      return None
+    response = self.session.get("/papi/v1/properties/{}".format(property_id))
+    if response.status_code != 200:
+      raise PAPIError(response.json())
+    property_json = response.json().get("properties").get("items")[0]
+    return PAPIProperty(**property_json)
+
+  def get_latest_property_version(self, propertyId, network=None) -> PAPIPropertyVersion:
     self.logger.debug("get_latest_property_version propertyId={propertyId} network={network}".format(propertyId=propertyId, network=network))
     params = dict()
     if not network is None:
       params["activatedOn"] = network
     url = "/papi/v1/properties/{propertyId}/versions/latest".format(propertyId=propertyId)
     response = self.session.get(url, params=params)
-    return response.json().get("versions").get("items")[0]
+    version_dict = response.json().get("versions").get("items")[0]
+    return PAPIPropertyVersion(**version_dict)
 
   def get_property_version(self, propertyId, propertyVersion):
     self.logger.debug("get_property_version propertyId={propertyId} propertyVersion={propertyVersion}".format(propertyId=propertyId, propertyVersion=propertyVersion))
     url = "/papi/v1/properties/{propertyId}/versions/{propertyVersion}".format(propertyId=propertyId, propertyVersion=propertyVersion)
     response = self.session.get(url)
-    return response.json().get("versions").get("items")[0]
+    version_dict = response.json().get("versions").get("items")[0]
+    return PAPIPropertyVersion(**version_dict)
 
   def get_property_versions(self, propertyId, limit=500, offset=0):
     self.logger.debug("get_property_versions propertyId={propertyId} limit={limit} offset={offset}".format(propertyId=propertyId, limit=limit, offset=offset))
     params = dict(limit=str(limit), offset=str(offset))
     url = "/papi/v1/properties/{propertyId}/versions".format(propertyId=propertyId)
     response = self.session.get(url, params=params).json()
-    meta_fields = dict((k, v) for (k, v) in response.items() if isinstance(v, (str, int)))
+    meta_fields = dict((k, v) for (k, v) in response.items() if k in ("accountId", "contractId", "propertyId", "groupId", "propertyName"))
     versions = list({**meta_fields, **version} for version in response.get("versions").get("items"))
-    return versions
+    return list(PAPIPropertyVersion(**version) for version in versions)
 
-  def find_latest_property_version(self, propertyId, predicate, pageSize=100, maxOffset=20):
-    self.logger.debug("find_latest_property_version propertyId={propertyId}".format(propertyId=propertyId))
+  def iter_property_versions(self, propertyId, predicate, pageSize=20):
+    self.logger.debug("iter_property_versions propertyId={propertyId}".format(propertyId=propertyId))
     offset = 0
-    while offset < maxOffset:
-      self.logger.debug("... find_latest_property_version propertyId={propertyId} offset={offset}".format(propertyId=propertyId, offset=offset))
+    while True:
+      self.logger.debug("... iter_property_versions propertyId={propertyId} offset={offset}".format(propertyId=propertyId, offset=offset))
       versions = self.get_property_versions(propertyId, pageSize, offset)
       if len(versions) == 0:
         break
-      try:
-        return next(version for version in versions if predicate(version))
-      except StopIteration:
-        offset += pageSize
-        continue
+      for idx, version in enumerate(versions):
+        if offset + idx > 10:
+          return
+        if predicate(version):
+          yield version
+      offset += pageSize
     return None
+
+  def find_latest_property_version(self, propertyId, predicate, pageSize=500):
+    self.logger.debug("find_latest_property_version propertyId={propertyId}".format(propertyId=propertyId))
+    return next(self.iter_property_versions(propertyId, predicate, pageSize))
 
   def create_property(self, propertyName, productId, ruleFormat, contractId, groupId) -> str:
     self.logger.debug("create_property propertyName={propertyName} contractId={contractId} groupId={groupId}".format(propertyName=propertyName, contractId=contractId, groupId=groupId))
@@ -136,7 +183,9 @@ class PAPIClient:
       headers["Content-Type"] = "application/vnd.akamai.papirules.{}+json".format(ruleTree.get("ruleFormat"))
     url = "/papi/v1/properties/{propertyId}/versions/{version}/rules".format(propertyId=propertyId, version=version)
     response = self.session.put(url, json=ruleTree, headers=headers)
-    return response.json()
+    if response.status_code == 200:
+      return PAPIPropertyVersionRuleTree(**response.json())
+    raise PAPIError(response.json())
 
   def update_property_hostnames(self, propertyId, version, hostnames):
     self.logger.debug("update_property_hostnames propertyId={propertyId} version={version}".format(propertyId=propertyId, version=version))
