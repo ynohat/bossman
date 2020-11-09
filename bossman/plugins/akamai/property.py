@@ -12,7 +12,7 @@ from bossman.abc import ResourceTypeABC
 from bossman.abc import ResourceStatusABC
 from bossman.abc import ResourceABC
 from bossman.repo import Repo, Revision, RevisionDetails
-from bossman.plugins.akamai.lib.papi import PAPIClient, PAPIPropertyVersion, PAPIBulkActivation
+from bossman.plugins.akamai.lib.papi import PAPIClient, PAPIPropertyVersion, PAPIBulkActivation, PAPIError
 
 RE_COMMIT = re.compile("^commit: ([a-z0-9]*)", re.MULTILINE)
 
@@ -99,12 +99,6 @@ class PropertyVersionComments:
   def committer(self):
     return self.metadata.get("committer", None)
 
-class PropertyVersionStatus:
-  def __init__(self, repo: Repo, resource: PropertyResource, version: PAPIPropertyVersion):
-    self.repo = repo
-    self.resource = resource
-    self.version = version
-
 class PropertyStatus(ResourceStatusABC):
   def __init__(self, repo: Repo, resource: PropertyResource, versions: list):
     self.repo = repo
@@ -119,9 +113,10 @@ class PropertyStatus(ResourceStatusABC):
   def dirty(self) -> bool:
     if not self.exists:
       return False
-    comments = PropertyVersionComments(self.versions[0].get("note", ""))
-    if comments.commit and self.repo.rev_exists(comments.commit):
-      return False
+    if self.versions[0].note is not None:
+      comments = PropertyVersionComments(self.versions[0].note)
+      if comments.commit and self.repo.rev_exists(comments.commit):
+        return False
     return True
 
   def __rich_console__(self, *args, **kwargs):
@@ -148,26 +143,28 @@ class PropertyStatus(ResourceStatusABC):
         if len(networks):
           parts.append(",".join(networks))
 
-        parts.append(r'[bright_white]"{subject_line}"[/]'.format(subject_line=comments.subject_line))
+        if comments.subject_line:
+          parts.append(r'[bright_white]"{subject_line}"[/]'.format(subject_line=comments.subject_line))
 
         def branch_status(branch):
-          missing_revs = self.repo.get_revisions(comments.commit, branch, paths=self.resource.paths)
-          if len(missing_revs):
-            parts.append(r'[rosy_brown]\[{}~{}][/]'.format(branch, len(missing_revs)))
+          revs_since = self.repo.get_revisions(comments.commit, branch)
+          if len(revs_since):
+            parts.append(r'[rosy_brown]\[{}~{}][/]'.format(branch, len(revs_since)))
           else:
             parts.append(r'[dark_olive_green3]\[{}][/]'.format(branch))
 
-        rev_branches = self.repo.get_branches_containing(comments.commit)
-        if len(rev_branches) == 0:
-          # If the comment referenced no commit, or if the commit was not found
-          # on any branch (which is possible if history was rewritten or the branch
-          # containing that commit was dropped without being merged), indicate question mark
-          parts.append(r':question:')
-        else:
-          for branch in rev_branches:
-            branch_status(branch)
-          for tag in self.repo.get_tags_pointing_at(comments.commit):
-            parts.append(r'[dark_violet]{}[/]'.format(tag))
+        if comments.commit:
+          rev_branches = self.repo.get_branches_containing(comments.commit)
+          if len(rev_branches) == 0:
+            # If the comment referenced no commit, or if the commit was not found
+            # on any branch (which is possible if history was rewritten or the branch
+            # containing that commit was dropped without being merged), indicate question mark
+            parts.append(r':question:')
+          else:
+            for branch in rev_branches:
+              branch_status(branch)
+            for tag in self.repo.get_tags_pointing_at(comments.commit):
+              parts.append(r'[dark_violet]{}[/]'.format(tag))
 
         author = comments.author
         if author:
@@ -175,6 +172,31 @@ class PropertyStatus(ResourceStatusABC):
           parts.append("[grey53]{}[/]".format(author))
 
         yield " ".join(parts)
+
+class PropertyApplyResult:
+  def __init__(self,
+              resource: PropertyResource,
+              revision: Revision, 
+              property_version: PAPIPropertyVersion=None,
+              error=None):
+    self.resource = resource
+    self.revision = revision
+    self.property_version = property_version
+    self.error = error
+
+  def __rich__(self):
+    parts = []
+    parts.append(r':arrow_up:')
+    parts.append(self.resource.__rich__())
+    parts.append(r'[grey53]\[{h}][/]'.format(h=self.revision.id))
+    if self.property_version:
+      parts.append(r'[grey53]v{version}[/]'.format(version=self.property_version.propertyVersion))
+    if self.revision.short_message:
+      parts.append(r'[bright_white]"{subject_line}"[/]'.format(subject_line=self.revision.short_message))
+    author = self.revision.author_name
+    if author:
+      parts.append("[grey53]{}[/]".format(author))
+    return " ".join(parts)
 
 class ResourceTypeOptions:
   def __init__(self, options):
@@ -206,12 +228,17 @@ class ResourceType(ResourceTypeABC):
         notes = head.get_notes(resource.path)
         v = notes.get("property_version", None)
         if v is not None:
-          interesting_versions.add(v)
+          interesting_versions.add(int(v))
+      interesting_versions = set(iv for iv in interesting_versions if isinstance(iv, int))
+      oldest = min(interesting_versions)
+      fetch_last_count = (prop.latestVersion - oldest) + 1
 
-      for iv in interesting_versions:
-        pv = self.papi.get_property_version(prop.propertyId, iv)
-        if pv is not None:
-          versions.append(pv)
+      versions = [
+        version 
+          for version 
+          in self.papi.get_property_versions(prop.propertyId, fetch_last_count)
+          if version.propertyVersion in interesting_versions
+      ]
 
     return PropertyStatus(self.repo, resource, versions)
 
@@ -235,17 +262,25 @@ class ResourceType(ResourceTypeABC):
     # we should only call this function if the Revision concerns the resource
     assert len(set(resource.paths).intersection(revision.affected_paths)) > 0
 
-    # Get the rules json from the commit
-    rules = revision.show_path(resource.rules_path)
-    if rules is None:
-      raise PropertyError("missing rule tree")
+    try:
+      # Get the rules json from the commit
+      rules = revision.show_path(resource.rules_path)
+      if rules is None:
+        raise PropertyError("missing rule tree")
 
-    # before changing anything in PAPI, check that the json files are valid
-    rules_json = self.validate_rules(resource, rules)
-    hostnames_json = None
-    if resource.hostnames_path in revision.affected_paths:
-      hostnames = revision.show_path(resource.hostnames_path)
-      hostnames_json = self.validate_hostnames(resource, hostnames)
+      # before changing anything in PAPI, check that the json files are valid
+      rules_json = self.validate_rules(resource, rules)
+
+      # Update the rule tree with metadata from the revision commit.
+      comments = PropertyVersionComments.from_revision(revision)
+      rules_json.update(comments=str(comments))
+
+      hostnames_json = None
+      if resource.hostnames_path in revision.affected_paths:
+        hostnames = revision.show_path(resource.hostnames_path)
+        hostnames_json = self.validate_hostnames(resource, hostnames)
+    except PropertyError as e:
+      return PropertyApplyResult(resource, revision, error=e)
 
     latest_version = next_version = None
 
@@ -260,12 +295,7 @@ class ResourceType(ResourceTypeABC):
         latest_version = self.papi.get_latest_property_version(property_id)
       # now we can create the new version in PAPI
       next_version = self.papi.create_property_version(property_id, latest_version.propertyVersion)
-      print("created new version: ", next_version.propertyVersion, "for rev", revision.id, revision.message)
     except PropertyNotFoundError:
-      requiredForCreate = ("groupId", "contractId", "ruleFormat", "productId")
-      missing = list(field for field in requiredForCreate if field not in rules_json)
-      if len(missing):
-        raise PropertyError("missing fields in {}: {}".format(resource.rules_path, ", ".join(missing)))
       property_id = self.papi.create_property(
         resource.name,
         rules_json.get("productId"),
@@ -273,36 +303,43 @@ class ResourceType(ResourceTypeABC):
         rules_json.get("contractId"),
         rules_json.get("groupId"),
       )
-      print("created property: ", resource.name, property_id)
-      # If we managed to create the property, we can simply use v1
-      latest_version = self.papi.get_latest_property_version(property_id)
-      next_version = latest_version
+      try:
+        # If we managed to create the property, we can simply use v1
+        latest_version = self.papi.get_latest_property_version(property_id)
+        next_version = latest_version
+      except PAPIError as e:
+        return PropertyApplyResult(resource, revision, error=e)
 
-    # first, we apply the hostnames change
-    if hostnames_json:
-      self.papi.update_property_hostnames(property_id, next_version.propertyVersion, hostnames_json)
-    # then, regardless of whether there was a change to the rule tree, we need to update it with
-    # the commit message and id, otherwise we will get a dirty status
-    comments = PropertyVersionComments.from_revision(revision)
-    rules_json.update(comments=str(comments))
-    result = self.papi.update_property_rule_tree(property_id, next_version.propertyVersion, rules_json)
+    try:
+      # first, we apply the hostnames change
+      if hostnames_json:
+        self.papi.update_property_hostnames(property_id, next_version.propertyVersion, hostnames_json)
+      # then, regardless of whether there was a change to the rule tree, we need to update it with
+      # the commit message and id, otherwise we will get a dirty status
+      result = self.papi.update_property_rule_tree(property_id, next_version.propertyVersion, rules_json)
 
-    # Finally, assign the updated values to the git notes
-    revision.get_notes(resource.path).set(
-      property_version=result.propertyVersion,
-      property_id=result.propertyId,
-      etag=result.etag
-    )
+      # Finally, assign the updated values to the git notes
+      revision.get_notes(resource.path).set(
+        property_version=result.propertyVersion,
+        property_id=result.propertyId,
+        etag=result.etag
+      )
+      return PropertyApplyResult(resource, revision, next_version)
+    except PAPIError as e:
+      return PropertyApplyResult(resource, revision, error=e)
+
 
   def get_property_version_for_revision_id(self, property_id, revision_id):
     cache = _cache.key("property_version", property_id, revision_id)
     property_version = cache.get_json()
     if property_version is None:
       search = r'commit: {}'.format(revision_id)
-      predicate = lambda v: search in v.get("note", "")
+      predicate = lambda v: search in v.note
       property_version = self.papi.find_latest_property_version(property_id, predicate)
       if property_version != None:
-        cache.update_json(property_version)
+        cache.update_json(property_version.__dict__)
+    else:
+      property_version = PAPIPropertyVersion(**property_version)
     return property_version
 
   def get_last_applied_revision_id(self, property_id):
@@ -330,12 +367,12 @@ class ResourceType(ResourceTypeABC):
     try:
       rules_json = json.loads(rules)
       # While these are not mandatory in PAPI, they ARE mandatory in bossman since
-      # it is the easiest and most standard way of telling bossman how to validate
-      # and version-freeze.
-      if not "productId" in rules_json:
-        raise PropertyError("{}: productId field is missing")
-      if not "ruleFormat" in rules_json:
-        raise PropertyError("{}: ruleFormat field is missing")
+      # it is the easiest and most standard way of telling bossman how to validate,
+      # version-freeze and create properties without imperative logic.
+      requiredFields = ("groupId", "contractId", "ruleFormat", "productId")
+      missing = list(field for field in requiredFields if field not in rules_json)
+      if len(missing):
+        raise PropertyError("{}: {} field is required".format(resource.rules_path, ", ".join(missing)))
 
       schema = self.papi.get_rule_format_schema(rules_json.get("productId"), rules_json.get("ruleFormat"))
       jsonschema.validate(rules_json, schema)

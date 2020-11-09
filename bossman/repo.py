@@ -6,6 +6,7 @@ from bossman.logging import get_class_logger
 from datetime import datetime
 import gitdb.exc
 import yaml
+import threading
 
 def true(*args, **kwargs):
   return True
@@ -103,7 +104,8 @@ class DeleteChange(Change):
     return self.diff.a_blob.data_stream.read()
 
 class Notes:
-  def __init__(self, commit: git.Commit, ns: str = None):
+  def __init__(self, repo, commit: git.Commit, ns: str = None):
+    self.repo = repo
     self.commit = commit
     self.ns = ns.strip("/")
 
@@ -129,11 +131,12 @@ class Notes:
 
   def write(self, notes):
     try:
-      args = []
-      if self.ns is not None:
-        args.extend(("--ref", self.ns))
-      args.extend(("add", "-f", "-m", yaml.safe_dump(notes), self.commit.hexsha))
-      self.commit.repo.git.notes(*args)
+      with self.repo._lock:
+        args = []
+        if self.ns is not None:
+          args.extend(("--ref", self.ns))
+        args.extend(("add", "-f", "-m", yaml.safe_dump(notes), self.commit.hexsha))
+        self.commit.repo.git.notes(*args)
     except git.GitCommandError as err:
       raise BossmanError(err)
 
@@ -216,7 +219,7 @@ class Revision:
     return self.changes.get(path, None)
 
   def get_notes(self, ns: str = None) -> Notes:
-    return Notes(self.commit, ns)
+    return Notes(self.repo, self.commit, ns)
 
   def __str__(self):
     s = "[{}] {} {} | {}".format(self.id, self.short_message, self.author_name, self.date)
@@ -247,14 +250,23 @@ class RevisionDetails:
   def __str__(self):
     return "{} ({})".format(self.id, self.details)
 
+def synchronized(method):
+  def wrapper(self, *arg, **kws):
+    with self._lock:
+      return method(self, *arg, **kws)
+  return wrapper
+
 class Repo:
+
   def __init__(self, root):
     self.logger = get_class_logger(self)
     self._repo = git.Repo(root)
+    self._lock = threading.RLock()
 
   def config_writer(self):
     return self._repo.config_writer()
 
+  @synchronized
   def rev_parse(self, rev: str) -> str:
     # We can't use Repo.rev_parse since it doesn't support
     # short hexshas or indirect refs such as tag names or branches.
@@ -264,12 +276,14 @@ class Repo:
     except git.GitCommandError:
       raise BossmanError("failed to resolve revision {}, please make sure it is a valid commit/tag name".format(rev))
 
+  @synchronized
   def rev_exists(self, rev: str) -> str:
     try:
       return isinstance(self.rev_parse(rev), git.Commit)
     except BossmanError:
       return False
 
+  @synchronized
   def rev_is_reachable(self, rev: str, from_rev: str = "HEAD") -> str:
     """
     Returns True if {rev} is an ancestor of {from_rev}.
@@ -284,6 +298,7 @@ class Repo:
     except BossmanError:
       return False
 
+  @synchronized
   def get_paths(self, rev: str = "HEAD", predicate = true) -> list:
     """
     Lists the paths versioned for revision {rev}, optionally filtered
@@ -299,6 +314,7 @@ class Repo:
     visitor(commit.tree)
     return paths
 
+  @synchronized
   def get_head(self):
     """
     Returns the HEAD revision, or None if this is the first commit.
@@ -313,6 +329,7 @@ class Repo:
     except StopIteration:
       return None
 
+  @synchronized
   def get_last_revision(self, paths: list, rev: str = "HEAD") -> Revision:
     """
     Returns the last revision in {rev}'s ancestry to have affected {paths}.
@@ -328,6 +345,7 @@ class Repo:
     except StopIteration:
       return None
 
+  @synchronized
   def get_revision(self, rev: str, paths: list = None):
     """
     Returns the revision {rev}, with diffs for {paths}.
@@ -340,12 +358,15 @@ class Repo:
       diffs = commit.diff(prev, paths=paths, R=True) # R=True -> reverse
     return Revision(self, commit, diffs)
 
+  @synchronized
   def get_current_branch(self):
     return self._repo.head.ref.name
 
+  @synchronized
   def get_branches(self) -> list:
     return tuple(branch.name for branch in self._repo.branches)
 
+  @synchronized
   def get_branches_containing(self, rev: str) -> list:
     try:
       result = self._repo.git.branch(contains=rev, format="%(refname:short)")
@@ -353,6 +374,7 @@ class Repo:
     except git.GitCommandError:
       return []
 
+  @synchronized
   def get_revisions(self, since_rev: str = None, until_rev: str = "HEAD",  paths: list = None) -> list:
     """
     Returns all revisions having affected {paths} in the ancestry of {until_rev}, bounded by {since_rev} if
@@ -372,6 +394,7 @@ class Repo:
         revisions.append(Revision(self, commit, diffs))
     return revisions
 
+  @synchronized
   def get_tags_pointing_at(self, rev="HEAD") -> list:
     try:
       rev = self.rev_parse(rev)

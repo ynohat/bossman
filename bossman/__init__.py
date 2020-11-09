@@ -67,6 +67,14 @@ class Bossman:
     resource_type = self.resource_manager.get_resource_type(resource.path)
     return resource_type.get_revision_details(resource, revision)
 
+  def get_resource_statuses(self, resources: list) -> list:
+    from concurrent.futures import ThreadPoolExecutor
+    futures = []
+    with ThreadPoolExecutor(10, "get_status") as executor:
+      for resource in resources:
+        futures.append(executor.submit(self.get_resource_status, resource))
+    return [f.result() for f in futures]
+
   def get_resource_status(self, resource: ResourceABC) -> ResourceStatusABC:
     resource_type = self.resource_manager.get_resource_type(resource.path)
     return resource_type.get_resource_status(resource)
@@ -86,7 +94,7 @@ class Bossman:
   def apply_change(self, resource: ResourceABC, revision: Revision):
     previous_revision = self.repo.get_last_revision(resource.paths, revision.parent_id)
     resource_type = self.resource_manager.get_resource_type(resource.path)
-    resource_type.apply_change(resource, revision, previous_revision)
+    return resource_type.apply_change(resource, revision, previous_revision)
 
   def validate(self, resource: ResourceABC):
     resource_type = self.resource_manager.get_resource_type(resource.path)

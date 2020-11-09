@@ -33,7 +33,9 @@ class PAPIPropertyVersion:
     self.propertyName = kwargs.get("propertyName")
     self.propertyVersion = kwargs.get("propertyVersion")
     self.etag = kwargs.get("etag")
-    self.note = kwargs.get("note")
+    # When note is empty, it is not provided in the JSON payload
+    # It is better for bossman to have a string always
+    self.note = kwargs.get("note", "")
     self.productionStatus = kwargs.get("productionStatus")
     self.stagingStatus = kwargs.get("stagingStatus")
 
@@ -162,7 +164,7 @@ class PAPIClient:
       groupId=groupId,
     ))
     if response.status_code != 201:
-      raise BossmanError(response.text)
+      raise PAPIError(response.json())
     property_resp = self.session.get(response.headers["Location"])
     return property_resp.json().get("propertyId")
 
@@ -174,7 +176,8 @@ class PAPIClient:
     url = "/papi/v1/properties/{propertyId}/versions".format(propertyId=propertyId)
     response = self.session.post(url, json=data)
     link = response.json().get("versionLink")
-    return self.session.get(link).json().get("versions").get("items")[0]
+    version = self.session.get(link).json().get("versions").get("items")[0]
+    return PAPIPropertyVersion(**version)
 
   def update_property_rule_tree(self, propertyId, version, ruleTree):
     self.logger.debug("update_property_rule_tree propertyId={propertyId} version={version}".format(propertyId=propertyId, version=version))

@@ -16,12 +16,13 @@ def exec(bossman: Bossman, glob, *args, **kwargs):
   if len(resources):
     print("On branch", bossman.get_current_branch())
 
+    statuses = bossman.get_resource_statuses(resources)
+
     col_width = min(max(len(resource.path) for resource in resources) + 2, 60)
     table = Table(expand=False, box=box.HORIZONTALS, show_lines=True)
     table.add_column("Resource", width=col_width)
     table.add_column("Status")
-    for resource in resources:
-      status = bossman.get_resource_status(resource)
+    for resource, status in zip(resources, statuses):
       table.add_row(resource, status)
     print(table)
   else:

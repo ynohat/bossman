@@ -1,11 +1,11 @@
+from concurrent.futures import ThreadPoolExecutor, wait
 from os import getcwd
 import git
 import argparse
-from rich.console import Console
-from rich.panel import Panel
+from rich import print
+from rich.padding import Padding
 from bossman import Bossman
-
-console = Console()
+from bossman.resources import ResourceABC
 
 def init(subparsers: argparse._SubParsersAction):
   parser = subparsers.add_parser("apply", help="apply local changes to remotes")
@@ -15,24 +15,30 @@ def init(subparsers: argparse._SubParsersAction):
 
 def exec(bossman: Bossman, glob, force=False, **kwargs):
   resources = bossman.get_resources(glob=glob)
-  for resource in resources:
-    console.rule(str(resource))
-    status = bossman.get_resource_status(resource)
-    missing_revisions = bossman.get_missing_revisions(resource)
-    console.print(":notebook: {} changes pending".format(len(missing_revisions)), justify="center")
-    if len(missing_revisions) and status.dirty:
-      if not force:
-        console.print(":stop_sign: [magenta]dirty, skipping[/magenta] :stop_sign:", justify="center")
-        continue
-      else:
-        console.print(":exclamation_mark: [red]dirty, force applying[/red] :exclamation_mark:", justify="center")
-    for (idx, revision) in enumerate(missing_revisions):
-      console.print(Panel(revision, title="{}/{}".format(idx+1, len(missing_revisions))))
+  futures = []
+  with ThreadPoolExecutor(10, "apply") as executor:
+    for resource in resources:
+      futures.append(executor.submit(apply_changes, bossman, resource, force))
+  wait(futures)
+  print(":cookie: [green]all resources up to date[green]")
+
+def apply_changes(bossman: Bossman, resource: ResourceABC, force: bool):
+  status = bossman.get_resource_status(resource)
+  revisions = bossman.get_missing_revisions(resource)
+  todo = len(revisions)
+  if todo > 0:
+    if status.dirty and not force:
+      print(":stop_sign:", resource, "[magenta]dirty, skipping[/magenta]")
+      return
+    results = []
+    for revision in revisions:
       try:
-        bossman.apply_change(resource, revision)
+        results.append(bossman.apply_change(resource, revision))
       except RuntimeError as e:
         if not force:
           raise e
-        console.print(":exclamation_mark: The following error occurred: {}. Continuing (--force)".format(e))
+        results.append(":exclamation_mark: {} an error occurred while applying {}\n{}", resource, revision, e)
+    for idx, result in enumerate(results):
+      print("{}/{}".format(idx+1, todo), result)
   else:
-    console.print(":cookie: [green]all done[green] :cookie:", justify="center")
+    print(":white_check_mark:", resource, "is up to date")
