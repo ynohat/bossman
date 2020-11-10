@@ -119,15 +119,16 @@ class Notes:
     return notes.get(k, default)
 
   def read(self) -> dict:
-    try:
-      args = []
-      if self.ns is not None:
-        args.extend(("--ref", self.ns))
-      args.extend(("show", self.commit.hexsha))
-      notes = self.commit.repo.git.notes(*args)
-      return yaml.safe_load(notes if notes else '{}')
-    except git.GitCommandError:
-      return {}
+    with self.repo._lock:
+      try:
+        args = []
+        if self.ns is not None:
+          args.extend(("--ref", self.ns))
+        args.extend(("show", self.commit.hexsha))
+        notes = self.commit.repo.git.notes(*args)
+        return yaml.safe_load(notes if notes else '{}')
+      except git.GitCommandError:
+        return {}
 
   def write(self, notes):
     try:
@@ -154,85 +155,103 @@ class Revision:
 
   @property
   def id(self):
-    return short_rev(self.commit.hexsha)
+    with self.repo._lock:
+      return short_rev(self.commit.hexsha)
 
   @property
   def parent_id(self):
     try:
-      return short_rev(self.commit.parents[0].hexsha)
+      with self.repo._lock:
+        return short_rev(self.commit.parents[0].hexsha)
     except IndexError:
       return None
 
   @property
   def branches(self):
-    return self.repo.get_branches_containing(self.id)
+    with self.repo._lock:
+      return self.repo.get_branches_containing(self.id)
 
   @property
   def date(self) -> datetime:
-    return self.commit.committed_datetime
+    with self.repo._lock:
+      return self.commit.committed_datetime
 
   @property
   def message(self) -> str:
-    return self.commit.message
+    with self.repo._lock:
+      return self.commit.message
 
   @property
   def short_message(self) -> str:
-    return self.message.split("\n").pop(0)
+    with self.repo._lock:
+      return self.message.split("\n").pop(0)
 
   @property
   def author_name(self) -> str:
-    return self.commit.author.name
+    with self.repo._lock:
+      return self.commit.author.name
 
   @property
   def author_email(self) -> str:
-    return self.commit.author.email
+    with self.repo._lock:
+      return self.commit.author.email
 
   @property
   def committer_name(self) -> str:
-    return self.commit.committer.name
+    with self.repo._lock:
+      return self.commit.committer.name
 
   @property
   def committer_email(self) -> str:
-    return self.commit.committer.email
+    with self.repo._lock:
+      return self.commit.committer.email
 
   @property
   def affected_paths(self) -> list:
-    return self.changes.keys()
+    with self.repo._lock:
+      return self.changes.keys()
 
   def show_path(self, path) -> dict:
-    contents = self.show_paths([path])
-    return contents.get(path, None)
+    with self.repo._lock:
+      contents = self.show_paths([path])
+      return contents.get(path, None)
 
   def show_paths(self, paths: list) -> dict:
-    contents = dict()
-    def get_blob_contents(blob):
-      if blob.path in paths:
-        contents[blob.path] = blob.data_stream.read()
-    visitor = TreeVisitor(get_blob_contents)
-    visitor(self.commit.tree)
-    return contents
+    with self.repo._lock:
+      contents = dict()
+      def get_blob_contents(blob):
+        if blob.path in paths:
+          contents[blob.path] = blob.data_stream.read()
+      visitor = TreeVisitor(get_blob_contents)
+      visitor(self.commit.tree)
+      return contents
 
   def get_changes(self, paths: str) -> Change:
-    return list(change for (path, change) in self.changes.items() if path in paths)
+    with self.repo._lock:
+      return list(change for (path, change) in self.changes.items() if path in paths)
 
   def get_change(self, path: str) -> Change:
-    return self.changes.get(path, None)
+    with self.repo._lock:
+      return self.changes.get(path, None)
 
   def get_notes(self, ns: str = None) -> Notes:
-    return Notes(self.repo, self.commit, ns)
+    with self.repo._lock:
+      return Notes(self.repo, self.commit, ns)
 
   def __str__(self):
-    s = "[{}] {} {} | {}".format(self.id, self.short_message, self.author_name, self.date)
-    if len(self.changes):
-      s += "\n\n  "
-      s += "\n  ".join(str(change) for change in self.changes.values())
-      s += "\n"
-    return s
+    with self.repo._lock:
+      s = "[{}] {} {} | {}".format(self.id, self.short_message, self.author_name, self.date)
+      if len(self.changes):
+        s += "\n\n  "
+        s += "\n  ".join(str(change) for change in self.changes.values())
+        s += "\n"
+      return s
 
   def __rich_console__(self, console, options):
-    yield "[b]\[{}][/b] {} | {} {}".format(self.id, self.short_message, self.author_name, self.date)
-    # for change in self.changes.values():
-    #   yield change
+    with self.repo._lock:
+      yield "[b]\[{}][/b] {} | {} {}".format(self.id, self.short_message, self.author_name, self.date)
+      # for change in self.changes.values():
+      #   yield change
 
 class RevisionDetails:
   """

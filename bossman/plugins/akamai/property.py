@@ -191,7 +191,7 @@ class PropertyApplyResult:
     self.property_version = property_version
     self.error = error
 
-  def __rich__(self):
+  def __rich_console__(self, *args, **kwargs):
     parts = []
     parts.append(r':arrow_up:')
     parts.append(self.resource.__rich__())
@@ -203,7 +203,13 @@ class PropertyApplyResult:
     author = self.revision.author_name
     if author:
       parts.append("[grey53]{}[/]".format(author))
-    return " ".join(parts)
+    yield " ".join(parts)
+    if self.error is not None:
+      from rich.panel import Panel
+      from rich.syntax import Syntax
+      import yaml
+      error_yaml = yaml.safe_dump(self.error.args[0])
+      yield '{}\n{}'.format(type(self.error).__name__, Syntax(error_yaml, "yaml").highlight(error_yaml))
 
 class ResourceTypeOptions:
   def __init__(self, options):
@@ -280,16 +286,14 @@ class ResourceType(ResourceTypeABC):
 
       # before changing anything in PAPI, check that the json files are valid
       rules_json = self.validate_rules(resource, rules)
-
       # Update the rule tree with metadata from the revision commit.
       comments = PropertyVersionComments.from_revision(revision)
       rules_json.update(comments=str(comments))
 
       hostnames_json = None
-      if resource.hostnames_path in revision.affected_paths:
-        hostnames = revision.show_path(resource.hostnames_path)
-        hostnames_json = self.validate_hostnames(resource, hostnames)
-    except Exception as e:
+      hostnames = revision.show_path(resource.hostnames_path)
+      hostnames_json = self.validate_hostnames(resource, hostnames)
+    except RuntimeError as e:
       return PropertyApplyResult(resource, revision, error=e)
 
     latest_version = next_version = None
@@ -319,11 +323,12 @@ class ResourceType(ResourceTypeABC):
         next_version = latest_version
       except RuntimeError as e:
         return PropertyApplyResult(resource, revision, error=e)
+    except RuntimeError as e:
+      return PropertyApplyResult(resource, revision, error=e)
 
     try:
       # first, we apply the hostnames change
-      if hostnames_json:
-        self.papi.update_property_hostnames(property_id, next_version.propertyVersion, hostnames_json)
+      self.papi.update_property_hostnames(property_id, next_version.propertyVersion, hostnames_json)
       # then, regardless of whether there was a change to the rule tree, we need to update it with
       # the commit message and id, otherwise we will get a dirty status
       result = self.papi.update_property_rule_tree(property_id, next_version.propertyVersion, rules_json)
@@ -416,7 +421,10 @@ class ResourceType(ResourceTypeABC):
       property_version = notes.get("property_version")
       if property_version:
         print("{}: {}".format(resource.path, "preparing to activate {}@{} (v{}) on {}`)".format(resource.path, revision.id, property_version, network)))
-        bulk_activation.add(property_id, property_version, network, [revision.author_email])
+        emails = [revision.author_email]
+        if revision.committer_email and revision.committer_email != revision.author_email:
+          emails.append(revision.committer_email)
+        bulk_activation.add(property_id, property_version, network, emails)
       else:
         print("{}: {}".format(resource.path, "skipping {}@{} (use `bossman apply --rev {} {}`)".format(resource.path, revision.id, revision.id, resource.path)))
     if bulk_activation.length > 0:

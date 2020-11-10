@@ -2,10 +2,14 @@ from concurrent.futures import ThreadPoolExecutor, wait
 from os import getcwd
 import git
 import argparse
+from rich import get_console
 from rich import print
 from rich.padding import Padding
+from rich.traceback import Traceback
 from bossman import Bossman
-from bossman.resources import ResourceABC
+from bossman.abc import ResourceABC
+
+console = get_console()
 
 def init(subparsers: argparse._SubParsersAction):
   parser = subparsers.add_parser("apply", help="apply local changes to remotes")
@@ -19,7 +23,12 @@ def exec(bossman: Bossman, glob, force=False, **kwargs):
   with ThreadPoolExecutor(10, "apply") as executor:
     for resource in resources:
       futures.append(executor.submit(apply_changes, bossman, resource, force))
-  wait(futures)
+  for resource, future in zip(resources, futures):
+    try:
+      future.result()
+    except Exception as e:
+      print(":exclamation_mark:", resource)
+      console.print_exception()
   print(":cookie: [green]all resources up to date[green]")
 
 def apply_changes(bossman: Bossman, resource: ResourceABC, force: bool):
@@ -38,7 +47,8 @@ def apply_changes(bossman: Bossman, resource: ResourceABC, force: bool):
         except Exception as e:
           if not force:
             raise e
-          results.append(":exclamation_mark: {} an error occurred while applying {}\n{}", resource, revision, e)
+          results.append(":exclamation_mark: {} an error occurred while applying {}\n{}".format(resource, revision, e))
+          console.print_exception()
       for idx, result in enumerate(results):
         print("{}/{}".format(idx+1, todo), result)
     else:

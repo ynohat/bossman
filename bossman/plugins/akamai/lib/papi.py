@@ -150,7 +150,7 @@ class PAPIClient:
 
   def find_latest_property_version(self, propertyId, predicate, pageSize=500):
     self.logger.debug("find_latest_property_version propertyId={propertyId}".format(propertyId=propertyId))
-    return next(self.iter_property_versions(propertyId, predicate, pageSize))
+    return next(self.iter_property_versions(propertyId, predicate, pageSize), None)
 
   def create_property(self, propertyName, productId, ruleFormat, contractId, groupId) -> str:
     self.logger.debug("create_property propertyName={propertyName} contractId={contractId} groupId={groupId}".format(propertyName=propertyName, contractId=contractId, groupId=groupId))
@@ -196,7 +196,9 @@ class PAPIClient:
     self.logger.debug("update_property_hostnames propertyId={propertyId} version={version}".format(propertyId=propertyId, version=version))
     url = "/papi/v1/properties/{propertyId}/versions/{version}/hostnames".format(propertyId=propertyId, version=version)
     response = self.session.put(url, json=hostnames)
-    return response.json()
+    if response.status_code == 200:
+      return response.json()
+    raise PAPIError(response.json())
 
   @lru_cache(maxsize=1000) # don't fetch more than once per session, even if the rule format wasn't persistently cacheable
   def get_rule_format_schema(self, productId, ruleFormat):
@@ -245,6 +247,7 @@ class PAPIClient:
           fatalError=apv.get("fatalError", '{}')
         )) for apv in status_response_json.get("activatePropertyVersions"))
         sys.stderr.write("\n")
+        print(activation_statuses)
         return activation_statuses
       sys.stderr.write("\rpatience{}".format("." * patience))
       patience += 1

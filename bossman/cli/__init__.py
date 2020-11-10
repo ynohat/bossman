@@ -10,6 +10,10 @@ from bossman import Bossman
 from bossman.config import Config
 from rich import print
 
+# Pretty tracebacks
+from rich.traceback import install
+install()
+
 logger = logger.getChild(globals().get("__name__"))
 
 def main():

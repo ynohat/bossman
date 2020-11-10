@@ -3,7 +3,7 @@ import git
 import argparse
 from bossman import Bossman
 from bossman.repo import Revision
-from bossman.resources import ResourceABC
+from bossman.abc import ResourceABC
 from rich.console import Console
 
 console = Console()
