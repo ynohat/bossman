@@ -38,6 +38,12 @@ This is alpha software. It is useful, but at your own risk.
 pip install bossman
 ```
 
+### Docker
+
+```bash
+docker run -it --rm -v $PWD:/work -v ~/.edgerc:/home/bossman/.edgerc bossman
+```
+
 ## Compatibility
 
 Should work on all platforms, but not extensively tested.
