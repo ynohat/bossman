@@ -41,7 +41,7 @@ pip install bossman
 ### Docker
 
 ```bash
-docker run -it --rm -v $PWD:/work -v ~/.edgerc:/home/bossman/.edgerc bossman
+docker run -it --rm -v $PWD:/work -v ~/.edgerc:/home/bossman/.edgerc ynohat/bossman
 ```
 
 ## Compatibility
