@@ -9,6 +9,6 @@ then
 fi
 
 bump2version $1
-rm -rf dist
+rm -rf dist build *.egg-info
 python3 setup.py sdist bdist_wheel
 twine upload dist/*
