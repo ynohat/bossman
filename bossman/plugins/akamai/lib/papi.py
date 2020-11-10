@@ -86,14 +86,11 @@ class PAPIClient:
 
   def get_property_id(self, propertyName):
     self.logger.debug("get_property_id propertyName={propertyName}".format(propertyName=propertyName))
-    cache = _cache.key("property_id", propertyName)
-    property_id = cache.get_str()
-    if property_id is None:
-      response = self.session.post("/papi/v1/search/find-by-value", json={"propertyName": propertyName})
-      versions = list(PAPIPropertyVersion(**item) for item in response.json().get("versions").get("items"))
-      if len(versions) > 0:
-        property_id = str(versions[0].propertyId)
-        cache.update(property_id)
+    property_id = None
+    response = self.session.post("/papi/v1/search/find-by-value", json={"propertyName": propertyName})
+    versions = list(PAPIPropertyVersion(**item) for item in response.json().get("versions").get("items"))
+    if len(versions) > 0:
+      property_id = str(versions[0].propertyId)
     return property_id
 
   def get_property(self, propertyName) -> PAPIProperty:
@@ -114,6 +111,8 @@ class PAPIClient:
       params["activatedOn"] = network
     url = "/papi/v1/properties/{propertyId}/versions/latest".format(propertyId=propertyId)
     response = self.session.get(url, params=params)
+    if response.status_code != 200:
+      raise PAPIError(response.json())
     version_dict = response.json().get("versions").get("items")[0]
     return PAPIPropertyVersion(**version_dict)
 
@@ -165,8 +164,11 @@ class PAPIClient:
     ))
     if response.status_code != 201:
       raise PAPIError(response.json())
-    property_resp = self.session.get(response.headers["Location"])
-    return property_resp.json().get("propertyId")
+    # Follow the Location header to the actual property
+    response = self.session.get(response.headers["Location"])
+    if response.status_code != 200:
+      raise PAPIError(response.json())
+    return response.json().get("properties").get("items")[0].get("propertyId")
 
   def create_property_version(self, propertyId, baseVersion, baseVersionEtag = None):
     self.logger.debug("create_property_version propertyId={propertyId} baseVersion={baseVersion}".format(propertyId=propertyId, baseVersion=baseVersion))

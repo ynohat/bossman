@@ -23,22 +23,25 @@ def exec(bossman: Bossman, glob, force=False, **kwargs):
   print(":cookie: [green]all resources up to date[green]")
 
 def apply_changes(bossman: Bossman, resource: ResourceABC, force: bool):
-  status = bossman.get_resource_status(resource)
-  revisions = bossman.get_missing_revisions(resource)
-  todo = len(revisions)
-  if todo > 0:
-    if status.dirty and not force:
-      print(":stop_sign:", resource, "[magenta]dirty, skipping[/magenta]")
-      return
-    results = []
-    for revision in revisions:
-      try:
-        results.append(bossman.apply_change(resource, revision))
-      except RuntimeError as e:
-        if not force:
-          raise e
-        results.append(":exclamation_mark: {} an error occurred while applying {}\n{}", resource, revision, e)
-    for idx, result in enumerate(results):
-      print("{}/{}".format(idx+1, todo), result)
-  else:
-    print(":white_check_mark:", resource, "is up to date")
+  try:
+    status = bossman.get_resource_status(resource)
+    revisions = bossman.get_missing_revisions(resource)
+    todo = len(revisions)
+    if todo > 0:
+      if status.dirty and not force:
+        print(":stop_sign:", resource, "[magenta]dirty, skipping[/magenta]")
+        return
+      results = []
+      for revision in revisions:
+        try:
+          results.append(bossman.apply_change(resource, revision))
+        except Exception as e:
+          if not force:
+            raise e
+          results.append(":exclamation_mark: {} an error occurred while applying {}\n{}", resource, revision, e)
+      for idx, result in enumerate(results):
+        print("{}/{}".format(idx+1, todo), result)
+    else:
+      print(":white_check_mark:", resource, "is up to date")
+  except RuntimeError as e:
+    print(":exclamation_mark:", resource, e)

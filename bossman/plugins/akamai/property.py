@@ -100,10 +100,11 @@ class PropertyVersionComments:
     return self.metadata.get("committer", None)
 
 class PropertyStatus(ResourceStatusABC):
-  def __init__(self, repo: Repo, resource: PropertyResource, versions: list):
+  def __init__(self, repo: Repo, resource: PropertyResource, versions: list, error=None):
     self.repo = repo
     self.resource = resource
     self.versions = sorted(versions, key=lambda v: int(v.propertyVersion), reverse=True)
+    self.error = error
 
   @property
   def exists(self):
@@ -120,7 +121,13 @@ class PropertyStatus(ResourceStatusABC):
     return True
 
   def __rich_console__(self, *args, **kwargs):
-    if len(self.versions) == 0:
+    if self.error is not None:
+      from rich.panel import Panel
+      from rich.syntax import Syntax
+      import yaml
+      error_yaml = yaml.safe_dump(self.error.args[0])
+      yield '{}\n{}'.format(type(self.error).__name__, Syntax(error_yaml, "yaml").highlight(error_yaml))
+    elif len(self.versions) == 0:
       yield "[gray31]not found[/]"
     else:
       for version in self.versions:
@@ -214,33 +221,36 @@ class ResourceType(ResourceTypeABC):
     return PropertyResource(path, **kwargs)
 
   def get_resource_status(self, resource: PropertyResource):
-    prop = self.papi.get_property(resource.name)
+    try:
+      prop = self.papi.get_property(resource.name)
 
-    interesting_versions = set()
-    versions = []
+      interesting_versions = set()
+      versions = []
 
-    if prop is not None:
-      interesting_versions.add(prop.stagingVersion)
-      interesting_versions.add(prop.productionVersion)
-      interesting_versions.add(prop.latestVersion)
-      for branch in self.repo.get_branches():
-        head = self.repo.get_revision(branch, resource.paths)
-        notes = head.get_notes(resource.path)
-        v = notes.get("property_version", None)
-        if v is not None:
-          interesting_versions.add(int(v))
-      interesting_versions = set(iv for iv in interesting_versions if isinstance(iv, int))
-      oldest = min(interesting_versions)
-      fetch_last_count = (prop.latestVersion - oldest) + 1
+      if prop is not None:
+        interesting_versions.add(prop.stagingVersion)
+        interesting_versions.add(prop.productionVersion)
+        interesting_versions.add(prop.latestVersion)
+        for branch in self.repo.get_branches():
+          head = self.repo.get_revision(branch, resource.paths)
+          notes = head.get_notes(resource.path)
+          v = notes.get("property_version", None)
+          if v is not None:
+            interesting_versions.add(int(v))
+        interesting_versions = set(iv for iv in interesting_versions if isinstance(iv, int))
+        oldest = min(interesting_versions)
+        fetch_last_count = (prop.latestVersion - oldest) + 1
 
-      versions = [
-        version 
-          for version 
-          in self.papi.get_property_versions(prop.propertyId, fetch_last_count)
-          if version.propertyVersion in interesting_versions
-      ]
+        versions = [
+          version 
+            for version 
+            in self.papi.get_property_versions(prop.propertyId, fetch_last_count)
+            if version.propertyVersion in interesting_versions
+        ]
 
-    return PropertyStatus(self.repo, resource, versions)
+      return PropertyStatus(self.repo, resource, versions)
+    except PAPIError as e:
+      return PropertyStatus(self.repo, resource, [], error=e)
 
   def is_applied(self, resource: PropertyResource, revision: Revision):
     notes = revision.get_notes(resource.path)
@@ -279,7 +289,7 @@ class ResourceType(ResourceTypeABC):
       if resource.hostnames_path in revision.affected_paths:
         hostnames = revision.show_path(resource.hostnames_path)
         hostnames_json = self.validate_hostnames(resource, hostnames)
-    except PropertyError as e:
+    except Exception as e:
       return PropertyApplyResult(resource, revision, error=e)
 
     latest_version = next_version = None
@@ -307,7 +317,7 @@ class ResourceType(ResourceTypeABC):
         # If we managed to create the property, we can simply use v1
         latest_version = self.papi.get_latest_property_version(property_id)
         next_version = latest_version
-      except PAPIError as e:
+      except RuntimeError as e:
         return PropertyApplyResult(resource, revision, error=e)
 
     try:
@@ -325,7 +335,7 @@ class ResourceType(ResourceTypeABC):
         etag=result.etag
       )
       return PropertyApplyResult(resource, revision, next_version)
-    except PAPIError as e:
+    except RuntimeError as e:
       return PropertyApplyResult(resource, revision, error=e)
 
 
