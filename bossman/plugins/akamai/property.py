@@ -158,10 +158,14 @@ class PropertyStatus(ResourceStatusABC):
 
         def branch_status(branch):
           revs_since = self.repo.get_revisions(comments.commit, branch)
+          missing_revs_since = self.repo.get_revisions(comments.commit, branch, self.resource.paths)
+          ref = branch
           if len(revs_since):
-            parts.append(r'[rosy_brown]\[{}~{}][/]'.format(branch, len(revs_since)))
-          else:
-            parts.append(r'[dark_olive_green3]\[{}][/]'.format(branch))
+            ref += "~{}".format(len(revs_since))
+          color = "dark_olive_green3"
+          if len(missing_revs_since):
+            color = "rosy_brown"
+          parts.append(r'[{}]\[{}][/]'.format(color, ref))
 
         if comments.commit:
           rev_branches = self.repo.get_branches_containing(comments.commit)
@@ -174,7 +178,7 @@ class PropertyStatus(ResourceStatusABC):
             for branch in rev_branches:
               branch_status(branch)
             for tag in self.repo.get_tags_pointing_at(comments.commit):
-              parts.append(r'[dark_violet]\[{}][/]'.format(tag))
+              parts.append(r'[bright_cyan]\[{}][/]'.format(tag))
 
         author = comments.author
         if author:

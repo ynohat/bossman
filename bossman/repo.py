@@ -409,7 +409,10 @@ class Repo:
       if commit.parents:
         prev = commit.parents[0]
       diffs = commit.diff(prev, paths=paths, R=True) # R=True -> reverse
-      if len(diffs):
+      # Two cases:
+      # - paths were specified: we want the list of commits affecting them (with a diff)
+      # - paths were not: we want the full log
+      if len(diffs) or paths is None:
         revisions.append(Revision(self, commit, diffs))
     return revisions
 
