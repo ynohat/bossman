@@ -49,8 +49,8 @@ def apply_changes(bossman: Bossman, resource: ResourceABC, force: bool):
             raise e
           results.append(":exclamation_mark: {} an error occurred while applying {}\n{}".format(resource, revision, e))
           console.print_exception()
-      for idx, result in enumerate(results):
-        print("{}/{}".format(idx+1, todo), result)
+      for result in results:
+        print(result)
     else:
       print(":white_check_mark:", resource, "is up to date")
   except RuntimeError as e:

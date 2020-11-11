@@ -150,6 +150,9 @@ class PropertyStatus(ResourceStatusABC):
         if len(networks):
           parts.append(",".join(networks))
 
+        if not comments.commit:
+          parts.append(":stop_sign: [magenta]dirty[/]")
+
         if comments.subject_line:
           parts.append(r'[bright_white]"{subject_line}"[/]'.format(subject_line=comments.subject_line))
 
@@ -171,7 +174,7 @@ class PropertyStatus(ResourceStatusABC):
             for branch in rev_branches:
               branch_status(branch)
             for tag in self.repo.get_tags_pointing_at(comments.commit):
-              parts.append(r'[dark_violet]{}[/]'.format(tag))
+              parts.append(r'[dark_violet]\[{}][/]'.format(tag))
 
         author = comments.author
         if author:
