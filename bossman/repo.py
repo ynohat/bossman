@@ -279,7 +279,10 @@ class Repo:
 
   def __init__(self, root):
     self.logger = get_class_logger(self)
-    self._repo = git.Repo(root)
+    try:
+      self._repo = git.Repo(root)
+    except git.InvalidGitRepositoryError:
+      raise RepoError("Not a git repository: {}.".format(root))
     self._lock = threading.RLock()
 
   def config_writer(self):

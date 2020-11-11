@@ -3,7 +3,7 @@ from os import path, getcwd
 import yaml
 import argparse
 from bossman.errors import BossmanError
-from bossman.cli import status_cmd, log_cmd, apply_cmd, validate_cmd, prerelease_cmd, release_cmd
+from bossman.cli import status_cmd, log_cmd, apply_cmd, validate_cmd, prerelease_cmd, release_cmd, init_cmd
 from bossman.config import Config
 from bossman.logging import logger
 from bossman import Bossman
@@ -24,6 +24,7 @@ def main():
 
     subparsers = parser.add_subparsers(title="Subcommands")
     version_cmd_init(subparsers)
+    init_cmd.init(subparsers)
     status_cmd.init(subparsers)
     log_cmd.init(subparsers)
     apply_cmd.init(subparsers)
