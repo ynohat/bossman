@@ -258,7 +258,11 @@ class ResourceType(ResourceTypeABC):
           version 
             for version 
             in self.papi.get_property_versions(prop.propertyId, fetch_last_count)
-            if version.propertyVersion in interesting_versions
+            if (
+              version.propertyVersion in interesting_versions or
+              version.stagingStatus == "PENDING" or
+              version.productionStatus == "PENDING"
+            )
         ]
 
       return PropertyStatus(self.repo, resource, versions)
