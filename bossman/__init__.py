@@ -3,6 +3,7 @@ from fnmatch import fnmatch
 from functools import cached_property
 
 from rich.console import Console
+from rich.progress import Progress
 
 from bossman.errors import BossmanError
 from bossman.resources import ResourceManager
@@ -139,15 +140,25 @@ class Bossman:
     resource_type.validate_working_tree(resource)
 
   @if_initialized
-  def prerelease(self, resources: list, revision: Revision):
-    resource_types = set(self.resource_manager.get_resource_type(resource.path) for resource in resources)
-    for resource_type in resource_types:
-      _resources = resource_type.get_resources(list(resource.path for resource in resources))
-      resource_type.prerelease(_resources, revision)
+  def prerelease(self, resource: ResourceABC, revision: Revision, on_update: callable):
+    resource_type = self.resource_manager.get_resource_type(resource.path)
+    resource_type.prerelease(resource, revision, on_update)
 
   @if_initialized
-  def release(self, resources: list, revision: Revision):
-    resource_types = set(self.resource_manager.get_resource_type(resource.path) for resource in resources)
-    for resource_type in resource_types:
-      _resources = resource_type.get_resources(list(resource.path for resource in resources))
-      resource_type.release(_resources, revision)
+  def release(self, resource: ResourceABC, revision: Revision, on_update: callable):
+    resource_type = self.resource_manager.get_resource_type(resource.path)
+    resource_type.release(resource, revision, on_update)
+
+  # @if_initialized
+  # def prerelease(self, resources: list, revision: Revision):
+  #   resource_types = set(self.resource_manager.get_resource_type(resource.path) for resource in resources)
+  #   for resource_type in resource_types:
+  #     _resources = resource_type.get_resources(list(resource.path for resource in resources))
+  #     resource_type.prerelease(_resources, revision)
+
+  # @if_initialized
+  # def release(self, resources: list, revision: Revision):
+  #   resource_types = set(self.resource_manager.get_resource_type(resource.path) for resource in resources)
+  #   for resource_type in resource_types:
+  #     _resources = resource_type.get_resources(list(resource.path for resource in resources))
+  #     resource_type.release(_resources, revision)

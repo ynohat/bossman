@@ -1,5 +1,7 @@
 import re
+import time
 import json
+import random
 from io import StringIO
 from os import getenv
 from os.path import expanduser, basename, dirname, join
@@ -12,7 +14,7 @@ from bossman.abc import ResourceTypeABC
 from bossman.abc import ResourceStatusABC
 from bossman.abc import ResourceABC
 from bossman.repo import Repo, Revision, RevisionDetails
-from bossman.plugins.akamai.lib.papi import PAPIClient, PAPIPropertyVersion, PAPIBulkActivation, PAPIError
+from bossman.plugins.akamai.lib.papi import PAPIClient, PAPIPropertyVersion, PAPIBulkActivation, PAPIError, PAPIVersionAlreadyActiveError, PAPIVersionAlreadyActivatingError
 
 RE_COMMIT = re.compile("^commit: ([a-z0-9]*)", re.MULTILINE)
 
@@ -423,34 +425,82 @@ class ResourceType(ResourceTypeABC):
       self.logger.error("{}: bad hostnames.json - {}", resource, err.args)
       raise PropertyError(resource, "invalid hostnames.json", err.args)
 
-  def _release(self, resources: list, revision: Revision, network: str):
-    bulk_activation = PAPIBulkActivation()
-    resources = sorted(resources)
-    for resource in resources:
-      notes = revision.get_notes(resource.path)
-      property_id = notes.get("property_id")
-      property_version = notes.get("property_version")
-      if property_version:
-        print("{}: {}".format(resource.path, "preparing to activate {}@{} (v{}) on {}`)".format(resource.path, revision.id, property_version, network)))
-        emails = [revision.author_email]
-        if revision.committer_email and revision.committer_email != revision.author_email:
-          emails.append(revision.committer_email)
-        bulk_activation.add(property_id, property_version, network, emails)
-      else:
-        print("{}: {}".format(resource.path, "skipping {}@{} (use `bossman apply --rev {} {}`)".format(resource.path, revision.id, revision.id, resource.path)))
-    if bulk_activation.length > 0:
-      result = self.papi.bulk_activate(bulk_activation)
-      for resource in resources:
-        status = result.get(resource.name)
-        if status is not None:
-          msg = "activation of v{propertyVersion} on {network} started".format(**status)
-          if status.get("taskStatus") == "SUBMISSION_ERROR":
-            fatalError = json.loads(status.get("fatalError"))
-            msg = "activation of v{propertyVersion} on {network} failed: {error}".format(error=fatalError.get("title", status.get("taskStatus")), **status)
-          print("{}: {}".format(resource.path, msg))
+  def _release(self, network: str, resource: ResourceABC, revision: Revision, on_update: callable = lambda resource, status, progress: None):
+    notes = revision.get_notes(resource.path)
+    property_id = notes.get("property_id")
+    if not property_id:
+      property_id = self.get_property_id(resource.name)
+    property_version = notes.get("property_version")
+    if not property_id:
+      on_update(resource, "[magenta]Property does not exist[/]", None)
+      return
+    if not property_version:
+      on_update(resource, "[magenta]{} not deployed[/]".format(revision.id), None)
+      return
+    emails = set([revision.author_email, revision.committer_email])
+    network_color = "green" if network == "production" else "magenta"
+    network_alias = re.sub("[aeiou]", "", network, flags=re.IGNORECASE)[:3].upper()
+    describe = lambda activation_status: "[{}]{}[/] [grey53]v{:<3}[/] [bright_white]{}[/]".format(network_color, network_alias, property_version, activation_status)
+    try:
+      on_update(resource, describe("STARTING"), None)
+      try:
+        (_, activation_status) = self.papi.activate(property_id, property_version, network, list(emails), "")
+      except PAPIVersionAlreadyActivatingError:
+        activations = self.papi.list_activations(property_id)
+        activation_status = next((activation_status
+          for activation_status
+          in activations
+          if activation_status.network == network
+          and not activation_status.done), 
+          None
+        )
+        if activation_status.property_version != property_version:
+          on_update(resource, describe("ACTIVATION of {} ALREADY IN PROGRESS".format(activation_status.property_version)), 1)
+          return
 
-  def prerelease(self, resources: list, revision: Revision):
-    self._release(resources, revision, "STAGING")
+      on_update(resource, describe(activation_status.status), activation_status.progress)
+      while not activation_status.done:
+        time.sleep(random.randint(-10, 10) + 20)
+        (_, activation_status) = self.papi.get_activation_status(activation_status.property_id, activation_status.activation_id)
+        on_update(resource, describe(activation_status.status), activation_status.progress)
+    except PAPIVersionAlreadyActiveError:
+      on_update(resource, describe("ALREADY ACTIVE"), 1)
 
-  def release(self, resources: list, revision: Revision):
-    self._release(resources, revision, "PRODUCTION")
+  def prerelease(self, resource: ResourceABC, revision: Revision, on_update: callable = lambda resource, status, progress: None):
+    return self._release("STAGING", resource, revision, on_update)
+
+  def release(self, resource: ResourceABC, revision: Revision, on_update: callable = lambda resource, status, progress: None):
+    return self._release("PRODUCTION", resource, revision, on_update)
+
+
+  # def _release(self, resources: list, revision: Revision, network: str):
+  #   bulk_activation = PAPIBulkActivation()
+  #   resources = sorted(resources)
+  #   for resource in resources:
+  #     notes = revision.get_notes(resource.path)
+  #     property_id = notes.get("property_id")
+  #     property_version = notes.get("property_version")
+  #     if property_version:
+  #       print("{}: {}".format(resource.path, "preparing to activate {}@{} (v{}) on {}`)".format(resource.path, revision.id, property_version, network)))
+  #       emails = [revision.author_email]
+  #       if revision.committer_email and revision.committer_email != revision.author_email:
+  #         emails.append(revision.committer_email)
+  #       bulk_activation.add(property_id, property_version, network, emails)
+  #     else:
+  #       print("{}: {}".format(resource.path, "skipping {}@{} (use `bossman apply --rev {} {}`)".format(resource.path, revision.id, revision.id, resource.path)))
+  #   if bulk_activation.length > 0:
+  #     result = self.papi.bulk_activate(bulk_activation)
+  #     for resource in resources:
+  #       status = result.get(resource.name)
+  #       if status is not None:
+  #         msg = "activation of v{propertyVersion} on {network} started".format(**status)
+  #         if status.get("taskStatus") == "SUBMISSION_ERROR":
+  #           fatalError = json.loads(status.get("fatalError"))
+  #           msg = "activation of v{propertyVersion} on {network} failed: {error}".format(error=fatalError.get("title", status.get("taskStatus")), **status)
+  #         print("{}: {}".format(resource.path, msg))
+
+  # def prerelease(self, resources: list, revision: Revision):
+  #   self._release(resources, revision, "STAGING")
+
+  # def release(self, resources: list, revision: Revision):
+  #   self._release(resources, revision, "PRODUCTION")

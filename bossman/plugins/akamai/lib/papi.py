@@ -11,6 +11,10 @@ _cache = cache.key(__name__)
 
 class PAPIError(BossmanError):
   pass
+class PAPIVersionAlreadyActiveError(PAPIError):
+  pass
+class PAPIVersionAlreadyActivatingError(PAPIError):
+  pass
 
 class PAPIProperty:
   def __init__(self, **kwargs):
@@ -49,6 +53,43 @@ class PAPIPropertyVersionRuleTree:
     self.etag = kwargs.get("etag")
     self.rules = kwargs.get("rules")
 
+class PAPIActivationStatus:
+  def __init__(self, **kwargs):
+    self.activation_id = kwargs.get("activationId")
+    self.activation_type = kwargs.get("activationType")
+    self.property_name = kwargs.get("propertyName")
+    self.property_id = kwargs.get("propertyId")
+    self.property_version = kwargs.get("propertyVersion")
+    self.network = kwargs.get("network")
+    self.note = kwargs.get("note")
+    self.status = kwargs.get("status")
+    self.fma_state = kwargs.get("fmaActivationState")
+
+  @property
+  def progress(self):
+    if self.activation_type == "ACTIVATE":
+      fma_states = dict(
+        received=0.25,
+        live=0.5,
+        deployed=0.75,
+        steady=1,
+      )
+      if self.fma_state in fma_states:
+        return fma_states.get(self.fma_state)
+      slow_states = dict(
+        NEW=None, 
+        PENDING=None,
+        ZONE_1=0.25,
+        ZONE_2=0.5,
+        ZONE_3=0.75,
+        ACTIVE=1
+      )
+      return slow_states.get(self.status)
+    return None
+
+  @property
+  def done(self):
+    return self.status in ("ACTIVE", "INACTIVE", "ABORTED", "FAILED", "DEACTIVATED")
 
 class PAPIBulkActivation:
   def __init__(self):
@@ -224,7 +265,56 @@ class PAPIClient:
       cache.update_json(schema)
     return schema
 
+  def activate(self, property_id, property_version, network, emails, note):
+    self.logger.debug("activate property_id={} network={}".format(property_id, network))
+    url = "/papi/v1/properties/{}/activations".format(property_id)
+    body = dict(
+      propertyVersion=property_version,
+      network=network,
+      notifyEmails=emails,
+      note=note,
+      acknowledgeAllWarnings=True,
+      complianceRecord=dict(
+        nonComplianceReason="NO_PRODUCTION_TRAFFIC",
+      ),
+    )
+    response = self.session.post(url, json=body)
+    if response.status_code == 409:
+      raise PAPIVersionAlreadyActivatingError()
+    if response.status_code == 422:
+      raise PAPIVersionAlreadyActiveError()
+    if response.status_code != 201:
+      raise PAPIError(response.text)
+    # follow the link to retrieve the status
+    response = self.session.get(response.headers["Location"])
+    if response.status_code != 200:
+      raise PAPIError(response.text)
+    activation_status = response.json().get("activations").get("items")[0]
+    retry_after = int(response.headers["Retry-After"])
+    return (retry_after, PAPIActivationStatus(**activation_status))
+
+  def list_activations(self, property_id):
+    self.logger.debug("list_activations property_id={}".format(property_id))
+    url = "/papi/v1/properties/{}/activations".format(property_id)
+    response = self.session.get(url)
+    if response.status_code != 200:
+      raise PAPIError(response.text)
+    return list(PAPIActivationStatus(**activation_status) for activation_status in response.json().get("activations").get("items"))
+
+  def get_activation_status(self, property_id, activation_id):
+    self.logger.debug("get_activation_status property_id={} activation_id={}".format(property_id, activation_id))
+    url = "/papi/v1/properties/{}/activations/{}".format(property_id, activation_id)
+    response = self.session.get(url)
+    if response.status_code != 200:
+      raise PAPIError(response.text)
+    activation_status = response.json().get("activations").get("items")[0]
+    retry_after = int(response.headers["Retry-After"])
+    return (retry_after, PAPIActivationStatus(**activation_status))
+
   def bulk_activate(self, bulkActivation: PAPIBulkActivation):
+    """
+    No longer used - may be ressuscitated later.
+    """
     self.logger.debug("bulk_activate bulkActivation={}".format(bulkActivation))
     url = "/papi/v1/bulk/activations"
     response = self.session.post(url, json=bulkActivation.payload)
