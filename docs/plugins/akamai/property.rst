@@ -2,8 +2,6 @@
 Akamai Property
 ================================
 
-
-
 Bossman structures property version notes, by encoding:
 
 - the commit message
