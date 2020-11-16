@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod, abstractproperty
-import git
+import git, gitdb
 from os.path import basename
 from bossman.errors import BossmanError
 from bossman.logging import get_class_logger
@@ -295,7 +295,7 @@ class Repo:
     try:
       hexsha = self._repo.git.rev_parse(rev)
       return self._repo.rev_parse(hexsha)
-    except git.GitCommandError:
+    except (git.GitCommandError, gitdb.exc.BadName):
       raise BossmanError("failed to resolve revision {}, please make sure it is a valid commit/tag name".format(rev))
 
   @synchronized
@@ -357,7 +357,7 @@ class Repo:
     Returns the last revision in {rev}'s ancestry to have affected {paths}.
     """
     try:
-      rev = self.rev_parse(rev)
+      rev = self.rev_parse(rev) if rev is not None else "HEAD"
       commit = next(self._repo.iter_commits(rev, paths=paths))
       prev = git.NULL_TREE
       if commit.parents:
