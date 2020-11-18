@@ -1,3 +1,5 @@
+.. _quickstart_akamai_simple_property:
+
 Akamai : Simple Property
 ====================================
 
@@ -163,19 +165,34 @@ Bossman does not deploy from working copy, so we need to commit our changes.
 
 Before deploying this change, we can check the status:
 
-.. image:: bossman_from_scratch_status_404.png
+.. image:: simple_property/bossman_from_scratch_status_404.png
 
 We can create the property and deploy the change from here:
 
-.. image:: bossman_from_scratch_create.png
+.. image:: simple_property/bossman_from_scratch_create.png
 
 And we can look at the status again:
 
-.. image:: bossman_from_scratch_status_created.png
+.. image:: simple_property/bossman_from_scratch_status_created.png
 
 Activating to staging
 ____________________________________
 
 Now we are ready to activate the property to staging.
 
-.. image:: bossman_from_scratch_prerelease.png
+.. image:: simple_property/bossman_from_scratch_prerelease.png
+
+After the process completes, we can check the status again:
+
+.. image:: simple_property/bossman_from_scratch_status_prereleased.png
+
+We have an indication that v1 is active on the staging network.
+
+And we can see the result of our efforts in Akamai Control Center!
+
+.. image:: simple_property/acc_v1.png
+
+Congratulations!
+____________________________________
+
+Next step: :ref:`quickstart_akamai_parallel_environments`
