@@ -33,7 +33,9 @@ def exec(bossman: Bossman, rev, glob, action, *args, **kwargs):
   console.print("Preparing to {}:".format(action))
   console.print(Panel(revision))
   console.print(Columns(resources, expand=False, equal=True))
-  Prompt.ask("Shall we proceed?", choices=("yes", "no"), default="no")
+  if Prompt.ask("Shall we proceed?", choices=("yes", "no"), default="no") != "yes":
+    console.print("OK!")
+    return
 
   with Progress(
       "[progress.description]{task.description}",
