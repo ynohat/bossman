@@ -36,6 +36,14 @@ are hard to meet.
 
 It is recommended to create a shell alias to avoid typing the above repeatedly!
 
+**Important** when using docker, the git ``user.name`` and ``user.email`` are not set globally.
+Make sure you set them locally in the repository configuration:
+
+.. code-block:: bash
+
+   git config --local user.name "Jane DOE"
+   git config --local user.email "Jane.DOE@acme.org"
+
 The docker image also comes with a few other tools that go well with bossman, in particular:
 
 - ``jq`` and ``git``
