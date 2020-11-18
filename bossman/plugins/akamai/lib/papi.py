@@ -37,6 +37,7 @@ class PAPIPropertyVersion:
     self.propertyName = kwargs.get("propertyName")
     self.propertyVersion = kwargs.get("propertyVersion")
     self.etag = kwargs.get("etag")
+    self.updatedByUser = kwargs.get("updatedByUser", "")
     # When note is empty, it is not provided in the JSON payload
     # It is better for bossman to have a string always
     self.note = kwargs.get("note", "")

@@ -182,7 +182,7 @@ class PropertyStatus(ResourceStatusABC):
             for tag in self.repo.get_tags_pointing_at(comments.commit):
               parts.append(r'[bright_cyan]\[{}][/]'.format(tag))
 
-        author = comments.author
+        author = comments.author or version.updatedByUser
         if author:
           author = author.rsplit(" ", 1)[0]
           parts.append("[grey53]{}[/]".format(author))
