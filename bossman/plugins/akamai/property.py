@@ -435,7 +435,7 @@ class ResourceType(ResourceTypeABC):
       on_update(resource, "[magenta]Property does not exist[/]", None)
       return
     if not property_version:
-      on_update(resource, "[magenta]{} not deployed[/]".format(revision.id), None)
+      on_update(resource, "[magenta]revision not deployed[/]", 1)
       return
     emails = set([revision.author_email, revision.committer_email])
     network_color = "green" if network == "production" else "magenta"
