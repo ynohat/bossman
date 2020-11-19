@@ -26,7 +26,7 @@ are hard to meet.
    docker run -t --rm \
       -e TERM=xterm-256color \
       -v $PWD:/work \
-      -v ~/.edgerc:/bossman/.edgerc ynohat/bossman --version
+      -v ~/.edgerc:/bossman/.edgerc ynohat/bossman version
 
 - ``-t`` is required to allocate a pseudo-terminal
 - ``-e TERM=xterm-256color`` gets rich colour output, which is necessary in particular for making the best use of ``bossman status``

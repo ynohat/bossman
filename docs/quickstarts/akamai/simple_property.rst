@@ -26,6 +26,15 @@ ____________________________________
 
   git init bossman_quickstart_akamai_simple_property
 
+Now that you have your git repository, Bossman needs a quick initialization as well.
+
+.. code-block:: bash
+
+  cd bossman_quickstart_akamai_simple_property
+  bossman init
+
+All set.
+
 Preparing the directory structure
 ____________________________________
 
