@@ -143,6 +143,14 @@ You can use the following as a template:
                     "id": YOUR_CPCODE_ID
                 }
               }
+          },
+          {
+              "name": "caching",
+              "options": {
+                "behavior": "MAX_AGE",
+                "mustRevalidate": false,
+                "ttl": "31d"
+              }
           }
         ]
     }

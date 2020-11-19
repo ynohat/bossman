@@ -91,9 +91,8 @@ We can check that all is in order in Akamai Control Center:
 Making a change on both environments
 ____________________________________
 
-Our configuration is not very useful right now, so let's add a behaviour
-to enable caching. In real life you'd likely want to target specific content
-types, but we're keeping this simple.
+By default, only HTTP ``GET`` requests are allowed on the Akamai platform. Allowing the use
+of more methods is quite easy, though. Let's support ``POST``!
 
 Simply add lines 44-51 highlighted below to both files:
 
@@ -106,7 +105,7 @@ already filled in with different values previously.
 .. code-block:: json
   :linenos:
   :force:
-  :emphasize-lines: 2,3,4,24,40,44-51
+  :emphasize-lines: 2,3,4,24,40,52-58
 
   {
     "contractId": "YOUR_CONTRACT_ID",
@@ -158,8 +157,15 @@ already filled in with different values previously.
                 "mustRevalidate": false,
                 "ttl": "31d"
               }
-          }
-        ]
+          },
+          {
+            "name": "allowPost",
+            "options": {
+               "allowWithoutContentLength": false,
+               "enabled": true
+            }
+         }
+      ]
     }
   }
 
