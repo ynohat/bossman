@@ -1,3 +1,4 @@
+.. _plugins_akamai_property:
 
 Akamai Property
 ================================

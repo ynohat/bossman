@@ -15,6 +15,7 @@ ____________________________________
 - A Content Provider Code
 - A domain name (this tutorial will refer to ``example.com``)
 - A Standard TLS Akamai Edge Hostname
+- A ``$HOME/.edgerc`` file with a ``papi`` section (but you can configure that after reading :ref:`plugins_akamai_property`)
 
 We will be using `<https://httpbin.org>`_ as an origin server, but you are free to use a different one
 if you prefer.
