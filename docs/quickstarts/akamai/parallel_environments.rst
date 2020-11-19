@@ -186,10 +186,10 @@ Now, we can activate on the Akamai staging network:
 Closing Remarks
 ____________________________________
 
-Bossman madde it very easy to deploy and activate the configurations. But a few things could
+Bossman made it very easy to deploy and activate the configurations. But a few things could
 be improved:
 
-* **You repeated yourself** when setting up the caching behaviour, this is (sometimes) an
+* **You repeated yourself** when setting up the ``allowPost`` behaviour, this is (sometimes) an
   engineering anti-pattern and there would be value in avoiding it!
 
 Because bossman does not concern itself with how you build the configuration JSON and only
