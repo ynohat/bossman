@@ -147,10 +147,14 @@ class PropertyStatus(ResourceStatusABC):
         parts.append(r'[grey53]v{version}[/]'.format(version=version.propertyVersion))
 
         if comments.commit:
-          revision = self.repo.get_revision(comments.commit, self.resource.paths)
-          notes = revision.get_notes(self.resource.path)
-          if notes.get("has_errors", False) == True:
-            parts.append(":boom:")
+          try:
+            revision = self.repo.get_revision(comments.commit, self.resource.paths)
+            notes = revision.get_notes(self.resource.path)
+            if notes.get("has_errors", False) == True:
+              parts.append(":boom:")
+          except BossmanError:
+            # if the commit is not found, maybe it wasn't pushed by the other party
+            pass
 
         networks = []
         for network in ("production", "staging"):
