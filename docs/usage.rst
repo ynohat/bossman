@@ -1,8 +1,8 @@
 Usage
 =================
 
-Bossman works on top of git working copies. Within a git working copy,
-Bossman will manage resources using plugins according to a simple configuration file.
+Bossman works on top of git working copies. Within a git working copy, Bossman will manage
+resources using plugins according to a simple configuration file.
 
 Configuration
 ________________________
@@ -51,23 +51,61 @@ This command must be run before anything can be done by Bossman. It adjusts the 
 file, adds a ``[bossman]`` section and extra refspecs to all remotess, to ensure
 that git notes are properly pushed and pulled along with commits.
 
+The ``glob`` argument
+__________________________________________________________
+
+``glob`` is accepted by all bossman commands that interact with resources. It allows the
+operator to restrict the command to a subset of resources.
+
+It performs partial matching on resource paths using `Unix filename pattern matching <https://docs.python.org/3/library/fnmatch.html>`_.
+
+.. csv-table:: Pattern modifiers
+  :header: "Pattern", "Meaning"
+
+  ``*``, "Matches everything (including /)"
+  ``?``, "Matches any single character (including /)"
+  ``[seq]``, "Matches any character in _seq_"
+  ``[!seq]``, "Matches any character _not_ in _seq_"
+
+Assuming you have the following resources in your repository:
+
+|  akamai/property/dev1
+|  akamai/requestcontrol/dev1
+|  akamai/property/dev2
+|  akamai/requestcontrol/dev2
+|  akamai/property/dev3
+|  akamai/requestcontrol/dev3
+|  akamai/property/integration
+|  akamai/property/prod
+
+* ``akamai``, ``akam`` or ``akamai/*``: will select all the resources
+* ``property`` or ``akamai/property``: will select all Akamai properties
+* ``dev[1-2]`` will select all Akamai resources (properties and requestcontrol) for dev1 and dev2
+* ``dev[!3]`` will select all Akamai resources (properties and requestcontrol) for dev1 and dev2
+
 ``bossman status [glob]``
 __________________________________________________________
 
-todo
+Provides synthetic information about the state of resources managed by bossman.
 
-``bossman apply [--rev HEAD] [glob]``
+``bossman apply [glob]``
 __________________________________________________________
 
-todo
+Deploys all pending commits.
 
 ``bossman validate [glob]``
 __________________________________________________________
 
-todo
+Validates the correctness of resources in the working copy.
+
+This is the only command that does not operate on a commit.
 
 ``bossman prerelease|release [--rev HEAD] [glob]``
 __________________________________________________________
+
+* ``prerelease``: makes a given revision available to an internal audience,
+  typically for testing
+* ``release``: makes a given revision available to the end users
 
 ``--rev`` can be any valid git commit reference, e.g.
 
@@ -80,5 +118,4 @@ __________________________________________________________
 ``bossman log [glob]``
 __________________________________________________________
 
-todo
-
+Outputs the revision history of the selected resources.
