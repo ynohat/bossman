@@ -145,7 +145,7 @@ If the property version has validation errors, activation is disallowed:
 
   It also formats the activation notes to look like this:
 
-  ``activation of 6d4fcb37 (R41) by jane.doe@acme.org using bossman 0.20.0``
+  ``activation of 6d4fcb37 (R41) by jane.doe@acme.org using bossman 0.25.0``
 
   Where
 
