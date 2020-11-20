@@ -53,6 +53,12 @@ class PAPIPropertyVersionRuleTree:
     self.propertyVersion = kwargs.get("propertyVersion")
     self.etag = kwargs.get("etag")
     self.rules = kwargs.get("rules")
+    self.errors = kwargs.get("errors", [])
+    self.warnings = kwargs.get("warnings", [])
+
+  @property
+  def has_errors(self):
+    return len(self.errors) > 0
 
 class PAPIActivationStatus:
   def __init__(self, **kwargs):

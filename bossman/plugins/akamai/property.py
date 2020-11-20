@@ -14,7 +14,15 @@ from bossman.abc import ResourceTypeABC
 from bossman.abc import ResourceStatusABC
 from bossman.abc import ResourceABC
 from bossman.repo import Repo, Revision, RevisionDetails
-from bossman.plugins.akamai.lib.papi import PAPIClient, PAPIPropertyVersion, PAPIBulkActivation, PAPIError, PAPIVersionAlreadyActiveError, PAPIVersionAlreadyActivatingError
+from bossman.plugins.akamai.lib.papi import (
+  PAPIClient,
+  PAPIPropertyVersion,
+  PAPIPropertyVersionRuleTree,
+  PAPIBulkActivation,
+  PAPIError,
+  PAPIVersionAlreadyActiveError,
+  PAPIVersionAlreadyActivatingError
+)
 
 RE_COMMIT = re.compile("^commit: ([a-z0-9]*)", re.MULTILINE)
 
@@ -138,6 +146,12 @@ class PropertyStatus(ResourceStatusABC):
 
         parts.append(r'[grey53]v{version}[/]'.format(version=version.propertyVersion))
 
+        if comments.commit:
+          revision = self.repo.get_revision(comments.commit, self.resource.paths)
+          notes = revision.get_notes(self.resource.path)
+          if notes.get("has_errors", False) == True:
+            parts.append(":boom:")
+
         networks = []
         for network in ("production", "staging"):
           color = "green" if network == "production" else "magenta"
@@ -192,12 +206,14 @@ class PropertyStatus(ResourceStatusABC):
 class PropertyApplyResult:
   def __init__(self,
               resource: PropertyResource,
-              revision: Revision, 
+              revision: Revision,
               property_version: PAPIPropertyVersion=None,
+              rule_tree: PAPIPropertyVersionRuleTree=None,
               error=None):
     self.resource = resource
     self.revision = revision
     self.property_version = property_version
+    self.rule_tree = rule_tree
     self.error = error
 
   def __rich_console__(self, *args, **kwargs):
@@ -212,6 +228,8 @@ class PropertyApplyResult:
     author = self.revision.author_name
     if author:
       parts.append("[grey53]{}[/]".format(author))
+    if self.rule_tree and self.rule_tree.has_errors:
+      parts.append(":boom:")
     yield " ".join(parts)
     if self.error is not None:
       from rich.panel import Panel
@@ -219,6 +237,11 @@ class PropertyApplyResult:
       import yaml
       error_yaml = yaml.safe_dump(self.error.args[0])
       yield '{}\n{}'.format(type(self.error).__name__, Syntax(error_yaml, "yaml").highlight(error_yaml))
+    if self.rule_tree and self.rule_tree.has_errors:
+      from rich.panel import Panel
+      from rich.syntax import Syntax
+      import yaml
+      yield Panel(Syntax(yaml.safe_dump(self.rule_tree.errors), "yaml"), title="Validation Errors")
 
 class ResourceTypeOptions:
   def __init__(self, options):
@@ -350,9 +373,10 @@ class ResourceType(ResourceTypeABC):
       revision.get_notes(resource.path).set(
         property_version=result.propertyVersion,
         property_id=result.propertyId,
-        etag=result.etag
+        etag=result.etag,
+        has_errors=result.has_errors
       )
-      return PropertyApplyResult(resource, revision, next_version)
+      return PropertyApplyResult(resource, revision, next_version, rule_tree=result)
     except RuntimeError as e:
       return PropertyApplyResult(resource, revision, error=e)
 
@@ -435,7 +459,10 @@ class ResourceType(ResourceTypeABC):
       on_update(resource, "[magenta]Property does not exist[/]", None)
       return
     if not property_version:
-      on_update(resource, "[magenta]revision not deployed[/]", 1)
+      on_update(resource, "[magenta]Revision not deployed[/]", 1)
+      return
+    if notes.get("has_errors") == True:
+      on_update(resource, ":boom: [grey53]v{:<3}[/] Property version has validation errors".format(property_version), 1)
       return
     emails = set([revision.author_email, revision.committer_email])
     network_color = "green" if network == "production" else "magenta"
