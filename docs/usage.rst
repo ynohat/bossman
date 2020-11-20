@@ -48,7 +48,7 @@ This command outputs the version. It is the only command that can be run before 
 __________________________________________________________
 
 This command must be run before anything can be done by Bossman. It adjusts the ``.git/config``
-file, adding a ``[bossman`` section, and adds extra refspecs to all remotess, to ensure
+file, adds a ``[bossman]`` section and extra refspecs to all remotess, to ensure
 that git notes are properly pushed and pulled along with commits.
 
 ``bossman status [glob]``
