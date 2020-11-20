@@ -60,7 +60,13 @@ todo
 ``bossman prerelease|release [--rev HEAD] [glob]``
 __________________________________________________________
 
-todo
+``--rev`` can be any valid git commit reference, e.g.
+
+* a commit hash (full or abbreviated)
+* a tag name
+* a branch name
+* ``HEAD``
+* a relative ref
 
 ``bossman log [glob]``
 __________________________________________________________

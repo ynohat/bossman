@@ -126,6 +126,10 @@ The purpose is threefold.
 ``bossman (pre)release [--rev HEAD] [glob]``
 _____________________________________________
 
-prerelease : activates the selected revision and resources to the staging network
-release : the same, to the production network
+**prerelease** : activates the selected revision and resources to the staging network
 
+**release** : the same, to the production network
+
+If the property version has validation errors, activation is disallowed:
+
+.. image:: property/release_validation_errors.png
