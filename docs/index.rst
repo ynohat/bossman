@@ -15,6 +15,7 @@ It is an alternative to the Akamai pipeline CLI and the Akamai terraform provide
    :caption: Contents:
 
    install
+   usage
    quickstarts
    plugins
    philosophy

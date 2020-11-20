@@ -6,6 +6,29 @@ Akamai Property
 This page provides reference information about how bossman commands relate to
 Akamai Property management.
 
+Resource Configuration
+________________________________
+
+.. code-block:: yaml
+
+  resources:
+    - module: bossman.plugins.akamai.property
+      pattern: akamai/property/{name}
+      options:
+        edgerc: ~/.edgerc
+        section: papi
+        switch_key: xyz
+
+The above are the default values, applied even if the ``.bossman`` configuration file is
+not present. You only need to configure if you need to depart from the defaults.
+
+With these defaults, Bossman will look for folders under ``akamai/property`` and treat
+them as Akamai Property configurations. The ``{name}`` placeholder is required and defines
+the name of the property to be managed.
+
+The next section details the structure of the resource, the files Bossman expects to find
+within the property configuration folder.
+
 Resource Structure
 ________________________________
 
@@ -32,22 +55,6 @@ validate and version freeze property versions when they are deployed.
 ``groupId`` and ``contractId`` are required so that Bossman has enough information
 to create new properties in the appropriate location.
 
-Resource Configuration
-________________________________
-
-.. code-block:: yaml
-
-  resources:
-    - module: bossman.plugins.akamai.property
-      pattern: akamai/property/{name}
-      options:
-        edgerc: ~/.edgerc
-        section: papi
-        switch_key: xyz
-
-The above are the default values, applied even if the ``.bossman`` configuration file is
-not present. You only need to configure if you need to depart from the defaults.
-
 ``bossman status [glob]``
 ________________________________
 
@@ -66,6 +73,12 @@ In the normal case, property versions are created by bossman and their status li
 * the property version
 * STG, PRD or STG,PRD depending on the activation status (if they are pending activation
   to staging or production, the network trigram is followed by an hourglass)
+* a 💥 icon if the version has validation errors
+
+  * that this icon should normally never be visible alongside an activation indicator (STG,PRD)
+  * this indicator relies on information stored in git at ``apply`` time (for performance). This
+    means that a ``🛑 dirty`` version will not show validation errors
+
 * the first line of the property version notes, truncated to 40 characters
 * a series of git refs to the corresponding commit, coloured green if the version corresponds
   to the latest commit on that branch, or brown if it is behind
@@ -73,7 +86,7 @@ In the normal case, property versions are created by bossman and their status li
 
 It is entirely acceptable to create new versions in the UI without breaking bossman.
 If an interesting version was created without using bossman, it will be called out
-as **dirty**, and will lack any git ref information to relate it to gitt histtory :
+as **dirty**, and will lack any git ref information to relate it to git history :
 
 .. image:: property/dirty_status.png
 
@@ -85,6 +98,11 @@ The ``apply`` command creates a new version for every commit on the current bran
 
 If the property does not exist, it is created.
 
+If the property version has validation errors, ``apply`` will succeed but a 💥 icon
+will be displayed, along with a list of errors as reported by the PAPI endpoint:
+
+.. image:: property/apply_validation_errors.png
+
 Bossman structures property version notes, by encoding:
 
 - the commit message
@@ -95,12 +113,15 @@ Bossman structures property version notes, by encoding:
   - the author
   - if applicable, the committer
 
-The purpose is twofold. It improves the quality of property version
-notes; if a good git commit message convention is in place, it is
-automatically applied to the property version.
+.. image:: property/apply_version_notes.png
 
-It also provides a mechanism for bossman to correlate property versions
-with git revisions.
+The purpose is threefold.
+
+* It improves the quality of property version notes; if a good git commit message convention
+  is in place, it is automatically applied to the property version;
+* The author(s) of the change are referenced clearly, which helps because API calls do not
+  record this information in a legible way in the regular Author field;
+* It provides a mechanism for bossman to correlate property versions with git revisions
 
 ``bossman (pre)release [--rev HEAD] [glob]``
 _____________________________________________
