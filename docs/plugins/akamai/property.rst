@@ -133,3 +133,22 @@ _____________________________________________
 If the property version has validation errors, activation is disallowed:
 
 .. image:: property/release_validation_errors.png
+
+.. topic:: Acivation notes & notifications
+
+  When Bossman triggers an activation, it automatically adds the following emails to
+  the email notification list:
+
+  * the author of the commit being released
+  * the committer of the commi being released, if different from the auhor
+  * the currently configured git user
+
+  It also formats the activation notes to look like this:
+
+  ``activation of 6d4fcb37 (R41) by jane.doe@acme.org using bossman 0.20.0``
+
+  Where
+
+  * ``6d4fcb37`` is the abbreviated commit hash being released
+  * ``R41`` is a list of tags pointing at the commit
+  * ``jane.doe@acme.org`` is the current git user email

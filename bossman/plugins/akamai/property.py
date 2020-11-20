@@ -464,14 +464,18 @@ class ResourceType(ResourceTypeABC):
     if notes.get("has_errors") == True:
       on_update(resource, ":boom: [grey53]v{:<3}[/] Property version has validation errors".format(property_version), 1)
       return
-    emails = set([revision.author_email, revision.committer_email])
+    emails = set([revision.author_email, revision.committer_email, self.repo.get_current_user_email()])
     network_color = "green" if network == "production" else "magenta"
     network_alias = re.sub("[aeiou]", "", network, flags=re.IGNORECASE)[:3].upper()
     describe = lambda activation_status: "[{}]{}[/] [grey53]v{:<3}[/] [bright_white]{}[/]".format(network_color, network_alias, property_version, activation_status)
     try:
       on_update(resource, describe("STARTING"), None)
       try:
-        (_, activation_status) = self.papi.activate(property_id, property_version, network, list(emails), "")
+        import pkg_resources
+        tags = self.repo.get_tags_pointing_at(revision.id)
+        activation_notes_revision = "{} ({})".format(revision.id, ", ".join(tags)) if len(tags) else revision.id
+        activation_notes = "activation of {} by {} using bossman {}".format(activation_notes_revision, self.repo.get_current_user_email(), pkg_resources.require("bossman")[0].version)
+        (_, activation_status) = self.papi.activate(property_id, property_version, network, list(emails), activation_notes)
       except PAPIVersionAlreadyActivatingError:
         activations = self.papi.list_activations(property_id)
         activation_status = next((activation_status

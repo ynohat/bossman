@@ -381,6 +381,21 @@ class Repo:
     return Revision(self, commit, diffs)
 
   @synchronized
+  def get_current_user_email(self):
+    """
+    Returns the result of `git config user.email`
+    """
+    return self._repo.git.config("user.email")
+
+  @synchronized
+  def get_current_user_name(self):
+    """
+    Returns the result of `git config user.name`
+    """
+    return self._repo.git.config("user.name")
+
+
+  @synchronized
   def get_current_branch(self):
     return self._repo.head.ref.name
 
