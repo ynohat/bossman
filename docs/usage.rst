@@ -9,6 +9,9 @@ ________________________
 
 Configuration is a YAML file which is optional if the defaults are acceptable.
 
+It should be called ``.bossman`` and reside at the root of the repository. It should
+be added to source control.
+
 It should have a single ``resources`` field defining associations between file match
 patterns and resource plugins:
 
@@ -29,6 +32,12 @@ In addition to the ``module`` and ``pattern`` fields, each resouce group can def
 additional plugin-specific parameters in an ``options`` field.
 
 See the :ref:`plugins` documentation pages for details.
+
+``.gitignore``
+_________________________________________________________
+
+Bossman creates a ``.bossmancache`` file at the root of the repository containing cache entries to
+speed up specific lookups. This should be added to ``.gitignore``.
 
 ``bossman version``
 __________________________________________________________

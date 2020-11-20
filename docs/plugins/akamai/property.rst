@@ -98,6 +98,10 @@ The ``apply`` command creates a new version for every commit on the current bran
 
 If the property does not exist, it is created.
 
+The ``productId`` and ``ruleFormat`` fields specified in the ``rules.json`` file
+are used to `freeze the property version <https://developer.akamai.com/api/core_features/property_manager/v1.html#freezerf>`_
+to a specific schema version.
+
 If the property version has validation errors, ``apply`` will succeed but a 💥 icon
 will be displayed, along with a list of errors as reported by the PAPI endpoint:
 
