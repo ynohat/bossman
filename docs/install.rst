@@ -6,7 +6,7 @@ Install
 Requirements
 ____________________________
 
-Bossman requires Python 3.8 and git 2.3.10.
+Bossman requires Python >=3.8 and git >=2.3.10.
 
 Installing Locally
 ____________________________
