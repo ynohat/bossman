@@ -19,7 +19,7 @@ def if_initialized(func):
   def wrapper(bossman, *args, **kwargs):
     if bossman.initialized:
       return func(bossman, *args, **kwargs)
-    raise BossmanError("Repository not initialized. Run `bossman init`.")
+    raise BossmanError("Repository not initialized or needs migration, please run `bossman init`.")
   return wrapper
 
 class Bossman:
@@ -38,8 +38,11 @@ class Bossman:
 
   @cached_property
   def initialized(self):
-    config = self.repo.config_writer()
+    config = self.repo.config_reader()
     if "bossman" in config.sections():
+      from .migrations import required
+      if required(config):
+        return False
       return True
     return False
 
@@ -52,28 +55,11 @@ class Bossman:
     self.init_git_config(console)
 
   def init_git_config(self, console: Console):
-    config = self.repo.config_writer()
-    console.print("Initializing git configuration [yellow]{}[/]...".format(join(self.root, ".git/config")))
-    if "bossman" not in config.sections():
-      config.add_section("bossman")
-    cur_version = config.get_value("bossman", "version", False)
+    from .migrations import migrate
+    conf = self.repo.config_writer()
+    migrate(conf, self.repo, console)
+    conf.set_value("bossman", "version", self.version)
 
-    console.print("- Ensuring git push/pull also affects notes...")
-    notes_refspec = "+refs/notes/*:refs/notes/*"
-    for section in config.sections():
-      if section.startswith("remote"):
-        push_refspecs = config.get_values(section, "push", [])
-        if notes_refspec not in push_refspecs:
-          config.add_value(section, "push", notes_refspec)
-        fetch_refspecs = config.get_values(section, "fetch", [])
-        if notes_refspec not in fetch_refspecs:
-          config.add_value(section, "fetch", notes_refspec)
-        console.print("  :white_check_mark: {} configured".format(section))
-
-    if cur_version != self.version:
-      # TODO: migration if required
-      pass
-    config.set_value("bossman", "version", self.version)
 
   @if_initialized
   def get_resources(self, rev: str = "HEAD", glob: str = "*") -> list:
@@ -109,6 +95,7 @@ class Bossman:
 
   @if_initialized
   def get_resource_status(self, resource: ResourceABC) -> ResourceStatusABC:
+    self.repo.fetch_notes(resource.path)
     resource_type = self.resource_manager.get_resource_type(resource.path)
     return resource_type.get_resource_status(resource)
 
@@ -130,9 +117,12 @@ class Bossman:
 
   @if_initialized
   def apply_change(self, resource: ResourceABC, revision: Revision):
+    self.repo.fetch_notes(resource.path)
     previous_revision = self.repo.get_last_revision(resource.paths, revision.parent_id)
     resource_type = self.resource_manager.get_resource_type(resource.path)
-    return resource_type.apply_change(resource, revision, previous_revision)
+    result = resource_type.apply_change(resource, revision, previous_revision)
+    self.repo.push_notes(resource.path)
+    return result
 
   @if_initialized
   def validate(self, resource: ResourceABC):
@@ -141,11 +131,13 @@ class Bossman:
 
   @if_initialized
   def prerelease(self, resource: ResourceABC, revision: Revision, on_update: callable):
+    self.repo.fetch_notes(resource.path)
     resource_type = self.resource_manager.get_resource_type(resource.path)
     resource_type.prerelease(resource, revision, on_update)
 
   @if_initialized
   def release(self, resource: ResourceABC, revision: Revision, on_update: callable):
+    self.repo.fetch_notes(resource.path)
     resource_type = self.resource_manager.get_resource_type(resource.path)
     resource_type.release(resource, revision, on_update)
 

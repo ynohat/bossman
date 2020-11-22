@@ -288,6 +288,27 @@ class Repo:
   def config_writer(self):
     return self._repo.config_writer()
 
+  def config_reader(self):
+    return self._repo.config_reader()
+
+  @synchronized
+  def fetch_notes(self, ns: str = "*"):
+    conf = self.config_reader()
+    ref = "refs/notes/" + ns
+    for section in conf.sections():
+      if section.startswith("remote"):
+        remote = section.split(" ").pop().strip('"')
+        self._repo.git.fetch(remote, "+{}:{}".format(ref, ref))
+
+  @synchronized
+  def push_notes(self, ns: str = "*"):
+    conf = self.config_reader()
+    ref = "refs/notes/" + ns
+    for section in conf.sections():
+      if section.startswith("remote"):
+        remote = section.split(" ").pop().strip('"')
+        self._repo.git.push(remote, "+{}:{}".format(ref, ref))
+
   @synchronized
   def rev_parse(self, rev: str) -> str:
     # We can't use Repo.rev_parse since it doesn't support
