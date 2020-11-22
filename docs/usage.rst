@@ -126,7 +126,7 @@ Validates the correctness of resources in the working copy.
 
 This is the only command that does not operate on a commit.
 
-``bossman prerelease|release [--rev HEAD] [glob*]``
+``bossman (pre)prerelease [--rev HEAD] [glob*]``
 __________________________________________________________
 
 * ``prerelease``: makes a given revision available to an internal audience,
