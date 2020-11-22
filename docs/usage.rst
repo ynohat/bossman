@@ -12,7 +12,7 @@ ________________________
 Configuration tells bossman where resources are in the repository, and which
 plugin to use to manage them.
 
-It lives is a YAML file which is optional if the defaults are acceptable.
+It lives in a YAML file which is optional if the defaults are acceptable.
 
 It should be called ``.bossman`` and reside at the root of the repository. It should
 be added to source control.
