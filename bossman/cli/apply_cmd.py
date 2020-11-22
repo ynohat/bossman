@@ -14,11 +14,11 @@ console = get_console()
 def init(subparsers: argparse._SubParsersAction):
   parser = subparsers.add_parser("apply", help="apply local changes to remotes")
   parser.add_argument("--force", action="store_true", default=False, help="don't skip dirty resources")
-  parser.add_argument("glob", nargs="?", default="*", help="select resources by glob pattern")
+  parser.add_argument("glob", nargs="*", default="*", help="select resources by glob pattern")
   parser.set_defaults(func=exec)
 
 def exec(bossman: Bossman, glob, force=False, **kwargs):
-  resources = bossman.get_resources(glob=glob)
+  resources = bossman.get_resources(*glob)
   futures = []
   with ThreadPoolExecutor(10, "apply") as executor:
     for resource in resources:

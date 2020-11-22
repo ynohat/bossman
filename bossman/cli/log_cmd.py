@@ -10,11 +10,11 @@ console = Console()
 
 def init(subparsers: argparse._SubParsersAction):
   parser = subparsers.add_parser("log", help="show resource change history")
-  parser.add_argument("glob", nargs="?", default="*", help="select resources by glob pattern")
+  parser.add_argument("glob", nargs="*", default="*", help="select resources by glob pattern")
   parser.set_defaults(func=exec)
 
 def exec(bossman: Bossman, glob, *args, **kwargs):
-  resources = bossman.get_resources(glob=glob)
+  resources = bossman.get_resources(*glob)
   revisions = bossman.get_revisions(resources=resources)
   for revision in revisions:
     view = RevisionView(bossman, revision, resources)

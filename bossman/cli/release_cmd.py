@@ -18,16 +18,16 @@ console = Console()
 def init(subparsers: argparse._SubParsersAction):
   prerelease_parser = subparsers.add_parser("prerelease", help="prerelease applicable resources")
   prerelease_parser.add_argument("--rev", required=False, default="HEAD", help="commit id or git ref to prerelease")
-  prerelease_parser.add_argument("glob", nargs="?", default="*", help="select resources by glob pattern")
+  prerelease_parser.add_argument("glob", nargs="*", default="*", help="select resources by glob pattern")
   prerelease_parser.set_defaults(func=exec, action="prerelease")
 
   release_parser = subparsers.add_parser("release", help="release applicable resources")
   release_parser.add_argument("--rev", required=False, default="HEAD", help="commit id or git ref to release")
-  release_parser.add_argument("glob", nargs="?", default="*", help="select resources by glob pattern")
+  release_parser.add_argument("glob", nargs="*", default="*", help="select resources by glob pattern")
   release_parser.set_defaults(func=exec, action="release")
 
 def exec(bossman: Bossman, rev, glob, action, *args, **kwargs):
-  resources = bossman.get_resources(glob=glob)
+  resources = bossman.get_resources(*glob)
   revision = bossman.get_revision(rev, resources)
 
   console.print("Preparing to {}:".format(action))

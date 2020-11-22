@@ -62,10 +62,16 @@ class Bossman:
 
 
   @if_initialized
-  def get_resources(self, rev: str = "HEAD", glob: str = "*") -> list:
+  def get_resources(self, *globs, rev: str = "HEAD") -> list:
     resources = self.resource_manager.get_resources(self.repo, rev)
-    glob = "*" + glob.strip("*") + "*"
-    return list(sorted(filter(lambda resource: fnmatch(resource.path, glob), resources)))
+    globs = list(globs)
+    # by default, all resources
+    if len(globs) == 0:
+      globs = globs.append("*")
+    # enable partial matches
+    globs = list("*" + glob.strip("*") + "*" for glob in globs)
+    match = lambda resource: any(fnmatch(resource.path, glob) for glob in globs)
+    return list(sorted(filter(match, resources)))
 
   @if_initialized
   def get_missing_revisions(self, resource: ResourceABC) -> list:

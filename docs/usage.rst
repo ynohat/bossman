@@ -54,53 +54,71 @@ that git notes are properly pushed and pulled along with commits.
 The ``glob`` argument
 __________________________________________________________
 
-``glob`` is accepted by all bossman commands that interact with resources. It allows the
+The ``glob`` argument is accepted by all bossman commands that interact with resources. It allows the
 operator to restrict the command to a subset of resources.
 
-It performs partial matching on resource paths using `Unix filename pattern matching <https://docs.python.org/3/library/fnmatch.html>`_.
+It  can be provided multiple times, which will restrict operation to the subset of resources whose paths
+match any of the patterns.
 
-.. csv-table:: Pattern modifiers
-  :header: "Pattern", "Meaning"
+.. topic:: Path matching details
 
-  ``*``, "Matches everything (including /)"
-  ``?``, "Matches any single character (including /)"
-  ``[seq]``, "Matches any character in _seq_"
-  ``[!seq]``, "Matches any character _not_ in _seq_"
+  It performs partial matching on resource paths using `Unix filename pattern matching <https://docs.python.org/3/library/fnmatch.html>`_.
 
-Assuming you have the following resources in your repository:
+  .. csv-table:: Pattern modifiers
+    :header: "Pattern", "Meaning"
 
-|  akamai/property/dev1
-|  akamai/requestcontrol/dev1
-|  akamai/property/dev2
-|  akamai/requestcontrol/dev2
-|  akamai/property/dev3
-|  akamai/requestcontrol/dev3
-|  akamai/property/integration
-|  akamai/property/prod
+    ``*``, "Matches everything (including /)"
+    ``?``, "Matches any single character (including /)"
+    ``[seq]``, "Matches any character in _seq_"
+    ``[!seq]``, "Matches any character _not_ in _seq_"
 
-* ``akamai``, ``akam`` or ``akamai/*``: will select all the resources
-* ``property`` or ``akamai/property``: will select all Akamai properties
-* ``dev[1-2]`` will select all Akamai resources (properties and requestcontrol) for dev1 and dev2
-* ``dev[!3]`` will select all Akamai resources (properties and requestcontrol) for dev1 and dev2
+  Assuming you have the following resources in your repository:
 
-``bossman status [glob]``
+  |  akamai/property/dev1
+  |  akamai/requestcontrol/dev1
+  |  akamai/property/dev2
+  |  akamai/requestcontrol/dev2
+  |  akamai/property/dev3
+  |  akamai/requestcontrol/dev3
+  |  akamai/property/integration
+  |  akamai/property/prod
+
+  * ``akamai``, ``akam`` or ``akamai/*``: will select all the resources
+  * ``property`` or ``akamai/property``: will select all Akamai properties
+  * ``dev[1-2]`` will select all Akamai resources (properties and requestcontrol) for dev1 and dev2
+  * ``dev[!3]`` will select all Akamai resources (properties and requestcontrol) for dev1 and dev2
+
+.. topic:: Combining with shell expansion
+
+  Some shells, such as ``bash`` and ``zsh`` also support expansion patterns that can complement bossman's
+  pattern matching for very convenient operation. For example, to select all non-production resources with
+  the set of resources above:
+
+  .. code-block:: bash
+
+    bossman status property/{dev\*,integration}
+    # gets expanded to the following by the shell
+    # bossman status property/dev* property/integration
+
+
+``bossman status [glob*]``
 __________________________________________________________
 
 Provides synthetic information about the state of resources managed by bossman.
 
-``bossman apply [glob]``
+``bossman apply [glob*]``
 __________________________________________________________
 
 Deploys all pending commits.
 
-``bossman validate [glob]``
+``bossman validate [glob*]``
 __________________________________________________________
 
 Validates the correctness of resources in the working copy.
 
 This is the only command that does not operate on a commit.
 
-``bossman prerelease|release [--rev HEAD] [glob]``
+``bossman prerelease|release [--rev HEAD] [glob*]``
 __________________________________________________________
 
 * ``prerelease``: makes a given revision available to an internal audience,
@@ -115,7 +133,7 @@ __________________________________________________________
 * ``HEAD``
 * a relative ref
 
-``bossman log [glob]``
+``bossman log [glob*]``
 __________________________________________________________
 
 Outputs the revision history of the selected resources.

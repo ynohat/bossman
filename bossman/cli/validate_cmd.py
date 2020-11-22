@@ -7,11 +7,11 @@ from bossman import Bossman
 
 def init(subparsers: argparse._SubParsersAction):
   parser = subparsers.add_parser("validate", help="validates the working tree")
-  parser.add_argument("glob", nargs="?", default="*", help="select resources by glob pattern")
+  parser.add_argument("glob", nargs="*", default="*", help="select resources by glob pattern")
   parser.set_defaults(func=exec)
 
 def exec(bossman: Bossman, glob, *args, **kwargs):
-  resources = bossman.get_resources(glob=glob)
+  resources = bossman.get_resources(*glob)
   if len(resources):
     table = Table()
     table.add_column("Resource")
