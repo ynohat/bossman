@@ -92,7 +92,7 @@ as **dirty**, and will lack any git ref information to relate it to git history 
 
 
 ``bossman apply [--force] [glob*]``
-__________________________________
+_____________________________________
 
 The ``apply`` command creates a new version for every commit on the current branch.
 
