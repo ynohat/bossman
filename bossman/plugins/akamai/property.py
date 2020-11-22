@@ -17,6 +17,7 @@ from bossman.repo import Repo, Revision, RevisionDetails
 from bossman.plugins.akamai.lib.papi import (
   PAPIClient,
   PAPIPropertyVersion,
+  PAPIPropertyVersionHostnames,
   PAPIPropertyVersionRuleTree,
   PAPIBulkActivation,
   PAPIError,
@@ -213,11 +214,13 @@ class PropertyApplyResult:
               revision: Revision,
               property_version: PAPIPropertyVersion=None,
               rule_tree: PAPIPropertyVersionRuleTree=None,
+              hostnames: PAPIPropertyVersionHostnames=None,
               error=None):
     self.resource = resource
     self.revision = revision
     self.property_version = property_version
     self.rule_tree = rule_tree
+    self.hostnames = hostnames
     self.error = error
 
   def __rich_console__(self, *args, **kwargs):
@@ -232,7 +235,7 @@ class PropertyApplyResult:
     author = self.revision.author_name
     if author:
       parts.append("[grey53]{}[/]".format(author))
-    if self.rule_tree and self.rule_tree.has_errors:
+    if (self.rule_tree and self.rule_tree.has_errors) or (self.hostnames and self.hostnames.has_errors):
       parts.append(":boom:")
     yield " ".join(parts)
     if self.error is not None:
@@ -241,6 +244,11 @@ class PropertyApplyResult:
       import yaml
       error_yaml = yaml.safe_dump(self.error.args[0])
       yield '{}\n{}'.format(type(self.error).__name__, Syntax(error_yaml, "yaml").highlight(error_yaml))
+    if self.hostnames and self.hostnames.has_errors:
+      from rich.panel import Panel
+      from rich.syntax import Syntax
+      import yaml
+      yield Panel(Syntax(yaml.safe_dump(self.hostnames.errors), "yaml"), title="Validation Errors")
     if self.rule_tree and self.rule_tree.has_errors:
       from rich.panel import Panel
       from rich.syntax import Syntax
@@ -368,19 +376,19 @@ class ResourceType(ResourceTypeABC):
 
     try:
       # first, we apply the hostnames change
-      self.papi.update_property_hostnames(property_id, next_version.propertyVersion, hostnames_json)
+      hostnames_result = self.papi.update_property_hostnames(property_id, next_version.propertyVersion, hostnames_json)
       # then, regardless of whether there was a change to the rule tree, we need to update it with
       # the commit message and id, otherwise we will get a dirty status
-      result = self.papi.update_property_rule_tree(property_id, next_version.propertyVersion, rules_json)
+      rule_tree_result = self.papi.update_property_rule_tree(property_id, next_version.propertyVersion, rules_json)
 
       # Finally, assign the updated values to the git notes
       revision.get_notes(resource.path).set(
-        property_version=result.propertyVersion,
-        property_id=result.propertyId,
-        etag=result.etag,
-        has_errors=result.has_errors
+        property_version=rule_tree_result.propertyVersion,
+        property_id=rule_tree_result.propertyId,
+        etag=rule_tree_result.etag,
+        has_errors=rule_tree_result.has_errors or hostnames_result.has_errors
       )
-      return PropertyApplyResult(resource, revision, next_version, rule_tree=result)
+      return PropertyApplyResult(resource, revision, next_version, rule_tree=rule_tree_result, hostnames=hostnames_result)
     except RuntimeError as e:
       return PropertyApplyResult(resource, revision, error=e)
 

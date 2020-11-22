@@ -44,6 +44,23 @@ class PAPIPropertyVersion:
     self.productionStatus = kwargs.get("productionStatus")
     self.stagingStatus = kwargs.get("stagingStatus")
 
+class PAPIPropertyVersionHostnames:
+  def __init__(self, **kwargs):
+    self.accountId = kwargs.get("accountId")
+    self.contractId = kwargs.get("contractId")
+    self.groupId = kwargs.get("groupId")
+    self.propertyId = kwargs.get("propertyId")
+    self.propertyName = kwargs.get("propertyName")
+    self.propertyVersion = kwargs.get("propertyVersion")
+    self.etag = kwargs.get("etag")
+    self.hostnames = kwargs.get("hostnames")
+    self.errors = kwargs.get("errors", [])
+    self.warnings = kwargs.get("warnings", [])
+
+  @property
+  def has_errors(self):
+    return len(self.errors) > 0
+
 class PAPIPropertyVersionRuleTree:
   def __init__(self, **kwargs):
     self.accountId = kwargs.get("accountId")
@@ -245,7 +262,7 @@ class PAPIClient:
     url = "/papi/v1/properties/{propertyId}/versions/{version}/hostnames".format(propertyId=propertyId, version=version)
     response = self.session.put(url, json=hostnames)
     if response.status_code == 200:
-      return response.json()
+      return PAPIPropertyVersionHostnames(**response.json())
     raise PAPIError(response.json())
 
   @lru_cache(maxsize=1000) # don't fetch more than once per session, even if the rule format wasn't persistently cacheable
