@@ -50,7 +50,7 @@ ADD . /bossman
 RUN apk add --virtual devtools --no-cache musl-dev libffi-dev openssl-dev gcc \
   && python3 -m pip install /bossman  \
   && python3 -m pip install httpie httpie-edgegrid  \
-  && apk add --no-cache jq bash git
+  && apk add --no-cache jq bash git make
 
 RUN adduser -Ds /bin/bash bossman
 USER bossman
