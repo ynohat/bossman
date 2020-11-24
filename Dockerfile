@@ -50,7 +50,7 @@ ADD . /bossman
 RUN apk add --virtual devtools --no-cache musl-dev libffi-dev openssl-dev gcc \
   && python3 -m pip install /bossman  \
   && python3 -m pip install httpie httpie-edgegrid  \
-  && apk add --no-cache jq bash git make
+  && apk add --no-cache jq bash git make openssh
 
 RUN adduser -Ds /bin/bash bossman
 USER bossman
@@ -67,5 +67,9 @@ RUN apk del devtools
 USER bossman
 VOLUME /work
 WORKDIR /work
+
+# When bossman invokes git to interact with a remote, force the git command
+# to ignore host key checking.
+ENV GIT_SSH_COMMAND="ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
 
 ENTRYPOINT ["bossman"]
