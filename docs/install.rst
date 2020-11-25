@@ -33,7 +33,7 @@ are hard to meet.
 - ``-e TERM=xterm-256color`` gets rich colour output, which is necessary in particular for making the best use of ``bossman status``
 - ``-v ~/.ssh/id_rsa:/home/bossman/.ssh/id_rsa`` mounts your SSH private key into the container; see notes below
 - ``-v $PWD:/work`` mounts the current working directory to ``/work`` which is the working directory in the container
-- ``-v ~/.edgerc:/bossman/.edgerc`` mounts the Akamai credential file in the appropriate location for bossman to find them
+- ``-v ~/.edgerc:/home/bossman/.edgerc`` mounts the Akamai credential file in the appropriate location for bossman to find them
 - ``ynohat/bossman`` references the Docker repository, however you may wish to `target a specific tag <https://hub.docker.com/repository/docker/ynohat/bossman/tags?page=1&ordering=last_updated>`_.
 
 It is recommended to create a shell alias to avoid typing the above repeatedly!
