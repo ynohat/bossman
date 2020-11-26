@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod, abstractproperty
+import sys
 import git, gitdb
 from os.path import basename
 from bossman.errors import BossmanError
@@ -14,7 +15,9 @@ def true(*args, **kwargs):
 def short_rev(rev):
   return rev[:8] if rev else rev
 
-class RepoError(RuntimeError):
+class RepoError(BossmanError):
+  pass
+class RepoAuthError(RepoError):
   pass
 
 class TreeVisitor:
@@ -298,7 +301,18 @@ class Repo:
     for section in conf.sections():
       if section.startswith("remote"):
         remote = section.split(" ").pop().strip('"')
-        self._repo.git.fetch(remote, "+{}:{}".format(ref, ref))
+        try:
+          self._repo.git.fetch(remote, "+{}:{}".format(ref, ref))
+        except git.GitCommandError as e:
+          if "invalid refspec" in e.stderr:
+            # if we don't have notes in this namespace we might get
+            # an invalid refspec
+            print("Warning: invalid refspec error occurred when running `{}`".format(e._cmdline), file=sys.stderr)
+            pass
+          elif "authentication failures" in e.stderr:
+            raise RepoAuthError("Failed to fetch from remote {}: {}".format(remote, e.stderr))
+          else:
+            raise e
 
   @synchronized
   def push_notes(self, ns: str = "*"):
@@ -307,7 +321,18 @@ class Repo:
     for section in conf.sections():
       if section.startswith("remote"):
         remote = section.split(" ").pop().strip('"')
-        self._repo.git.push(remote, "+{}:{}".format(ref, ref))
+        try:
+          self._repo.git.push(remote, "+{}:{}".format(ref, ref))
+        except git.GitCommandError as e:
+          if "invalid refspec" in e.stderr:
+            # if we don't have notes in this namespace we might get
+            # an invalid refspec; this should be quite unlikely
+            print("Warning: invalid refspec error occurred when running `{}`".format(e._cmdline), file=sys.stderr)
+            pass
+          elif "authentication failures" in e.stderr:
+            raise RepoAuthError("Failed to fetch from remote {}: {}".format(remote, e.stderr))
+          else:
+            raise e
 
   @synchronized
   def rev_parse(self, rev: str) -> str:
