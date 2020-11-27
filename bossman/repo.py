@@ -19,6 +19,8 @@ class RepoError(BossmanError):
   pass
 class RepoAuthError(RepoError):
   pass
+class RepoRevNotFoundError(RepoError):
+  pass
 
 class TreeVisitor:
   """
@@ -342,7 +344,7 @@ class Repo:
       hexsha = self._repo.git.rev_parse(rev)
       return self._repo.rev_parse(hexsha)
     except (git.GitCommandError, gitdb.exc.BadName):
-      raise BossmanError("failed to resolve revision {}, please make sure it is a valid commit/tag name".format(rev))
+      raise RepoRevNotFoundError("failed to resolve revision {}, please make sure it is a valid commit/tag name".format(rev))
 
   @synchronized
   def rev_exists(self, rev: str) -> str:
@@ -372,14 +374,12 @@ class Repo:
     Lists the paths versioned for revision {rev}, optionally filtered
     by {predicate}.
     """
-    try:
-      commit = self.rev_parse(rev)
-    except gitdb.exc.BadName:
-      raise BossmanError("This branch likely has no commits yet.")
+    commit = self.rev_parse(rev)
+    tree  = commit.tree
 
     paths = []
     visitor = TreeVisitor(lambda blob: paths.append(blob.path))
-    visitor(commit.tree)
+    visitor(tree)
     return paths
 
   @synchronized

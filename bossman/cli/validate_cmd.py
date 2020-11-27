@@ -11,7 +11,7 @@ def init(subparsers: argparse._SubParsersAction):
   parser.set_defaults(func=exec)
 
 def exec(bossman: Bossman, glob, *args, **kwargs):
-  resources = bossman.get_resources(*glob)
+  resources = bossman.get_resources_from_working_copy(*glob)
   if len(resources):
     table = Table()
     table.add_column("Resource")

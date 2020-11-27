@@ -31,3 +31,15 @@ class ResourceManager:
     for resource_type in self.resource_types:
       resources.extend(resource_type.get_resources(paths))
     return resources
+
+  def get_resources_from_working_copy(self, repo: Repo) -> list:
+    from os import walk
+    from os.path import relpath, join
+    paths = []
+    for root, dir, files in walk(repo._repo.working_tree_dir):
+      for file in files:
+        paths.append(relpath(join(root, file), repo._repo.working_tree_dir))
+    resources = []
+    for resource_type in self.resource_types:
+      resources.extend(resource_type.get_resources(paths))
+    return resources

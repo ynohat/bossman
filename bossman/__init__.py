@@ -74,6 +74,18 @@ class Bossman:
     return list(sorted(filter(match, resources)))
 
   @if_initialized
+  def get_resources_from_working_copy(self, *globs) -> list:
+    resources = self.resource_manager.get_resources_from_working_copy(self.repo)
+    globs = list(globs)
+    # by default, all resources
+    if len(globs) == 0:
+      globs = globs.append("*")
+    # enable partial matches
+    globs = list("*" + glob.strip("*") + "*" for glob in globs)
+    match = lambda resource: any(fnmatch(resource.path, glob) for glob in globs)
+    return list(sorted(filter(match, resources)))
+
+  @if_initialized
   def get_missing_revisions(self, resource: ResourceABC) -> list:
     resource_type = self.resource_manager.get_resource_type(resource.path)
     revisions = self.get_revisions(resources=[resource])
