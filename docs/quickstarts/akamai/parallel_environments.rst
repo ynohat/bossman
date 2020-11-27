@@ -179,9 +179,14 @@ We can now commit the change:
 
 .. code-block:: bash
 
-  git commit -am "cache all content for 31d"
+  git commit -am "allow POST"
 
 ...and deploy the change - you're getting used to this by now :)
+
+::
+
+  Note that the commit message displayed in the screenshot is from an older version of this
+  tutorial where we were effecting a different change, please bear with this.
 
 .. image:: parallel_environments/apply_caching.png
 
@@ -210,3 +215,4 @@ In this tutorial we showed how all configurations could be kept in lockstep, but
 supports the "preprod then prod" workflow with equal ease.
 
 We will cover these in later tutorials.
+)

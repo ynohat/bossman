@@ -55,3 +55,12 @@ html_theme = "sphinx_rtd_theme"
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
+
+# When adding a literal block, e.g.:
+# ::
+#
+#    Yadayada
+#
+# We do not expect it to be highlighted, so we turn it off.
+# This does not affect code blocks.
+highlight_language = 'none'
