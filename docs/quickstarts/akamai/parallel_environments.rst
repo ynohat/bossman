@@ -175,7 +175,13 @@ Now use ``bossman validate`` to run superficial syntax checks on your working co
 
 If you get thumbs up, great! If not, double-check the JSON.
 
-Our next step is to deploy the change - you're getting used to this by now :)
+We can now commit the change:
+
+.. code-block:: bash
+
+  git commit -am "cache all content for 31d"
+
+...and deploy the change - you're getting used to this by now :)
 
 .. image:: parallel_environments/apply_caching.png
 
