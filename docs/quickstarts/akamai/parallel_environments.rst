@@ -50,7 +50,7 @@ serves a different hostname.
 
 Let's make a quick detour now and run ``bossman status``:
 
-.. image:: simple_property/bossman_from_scratch_status_prereleased.png
+.. figure:: simple_property/bossman_from_scratch_status_prereleased.png
 
 Our new environment is not shown! This is because bossman only concerns itself with
 commits, by design.
@@ -62,14 +62,14 @@ commits, by design.
 
 Now the new environment is tracked by bossman:
 
-.. image:: parallel_environments/preprod_not_found.png
+.. figure:: parallel_environments/preprod_not_found.png
 
 Deployment
 ____________________________________
 
 Just as we did previously, it is now time to deploy our change:
 
-.. image:: parallel_environments/apply.png
+.. figure:: parallel_environments/apply.png
 
 There was no change to deploy to the ``bossman_from_scratch`` property, and
 v1 of ``bossman_from_scratch_preprod`` was created as expected.
@@ -79,14 +79,14 @@ ____________________________________
 
 Now let us prerelease our new configuration to the staging network.
 
-.. image:: parallel_environments/prerelease_pending.png
+.. figure:: parallel_environments/prerelease_pending.png
 
 Note that because the commit did not touch ``bosssman_from_scratch``, it was not
 deployed, so bossman does not attempt to activate it.
 
 We can check that all is in order in Akamai Control Center:
 
-.. image:: parallel_environments/acc.png
+.. figure:: parallel_environments/acc.png
 
 Making a change on both environments
 ____________________________________
@@ -171,7 +171,7 @@ already filled in with different values previously.
 
 Now use ``bossman validate`` to run superficial syntax checks on your working copy...
 
-.. image:: parallel_environments/validate_caching.png
+.. figure:: parallel_environments/validate_caching.png
 
 If you get thumbs up, great! If not, double-check the JSON.
 
@@ -188,11 +188,11 @@ We can now commit the change:
   Note that the commit message displayed in the screenshot is from an older version of this
   tutorial where we were effecting a different change, please bear with this.
 
-.. image:: parallel_environments/apply_caching.png
+.. figure:: parallel_environments/apply_caching.png
 
 Now, we can activate on the Akamai staging network:
 
-.. image:: parallel_environments/prerelease_caching.png
+.. figure:: parallel_environments/prerelease_caching.png
 
 Closing Remarks
 ____________________________________

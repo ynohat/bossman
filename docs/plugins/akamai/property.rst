@@ -68,7 +68,7 @@ Interesting property versions are either:
 
 In the normal case, property versions are created by bossman and their status line shows:
 
-.. image:: property/normal_status.png
+.. figure:: property/normal_status.png
 
 * the property version
 * STG, PRD or STG,PRD depending on the activation status (if they are pending activation
@@ -84,12 +84,28 @@ In the normal case, property versions are created by bossman and their status li
   to the latest commit on that branch, or brown if it is behind
 * a series of tags pointing at the corresponding commit, coloured blue
 
-It is entirely acceptable to create new versions in the UI without breaking bossman.
-If an interesting version was created without using bossman, it will be called out
-as **dirty**, and will lack any git ref information to relate it to git history :
+.. topic:: Making changes in the UI
 
-.. image:: property/dirty_status.png
+  It is entirely acceptable to create new versions in the UI without breaking bossman.
+  If an interesting version was created without using bossman, it will be called out
+  as **dirty**, and will lack any git ref information to relate it to git history :
 
+  .. figure:: property/dirty_status.png
+
+
+  There are two caveats however:
+
+  * **bossman will not be able to activate these versions** - indeed, bossman concerns
+    itself with the deployment and release cycle of *git commits*. By definition, a dirty
+    version is not associated to a commit, and is therefore "out of band"; the recommended
+    approach is then to re-integrate the change into the code
+  * **bossman cannot help with reintegration of changes from dirty versions** - this needs
+    to be done manually and the method will depend largely on how the configurations are
+    maintained as code.
+
+  These aspects are by design and unlikely to change. Bossman acknowledges the need to make
+  occasional changes in the UI, but if it is the primary workflow, then maybe bossman is not
+  the best choice.
 
 ``bossman apply [--force] [glob*]``
 _____________________________________
@@ -105,7 +121,7 @@ to a specific schema version.
 If the property version has validation errors, ``apply`` will succeed but a 💥 icon
 will be displayed, along with a list of errors as reported by the PAPI endpoint:
 
-.. image:: property/apply_validation_errors.png
+.. figure:: property/apply_validation_errors.png
 
 Bossman structures property version notes, by encoding:
 
@@ -117,7 +133,7 @@ Bossman structures property version notes, by encoding:
   - the author
   - if applicable, the committer
 
-.. image:: property/apply_version_notes.png
+.. figure:: property/apply_version_notes.png
 
 The purpose is threefold.
 
@@ -136,7 +152,7 @@ _____________________________________________
 
 If the property version has validation errors, activation is disallowed:
 
-.. image:: property/release_validation_errors.png
+.. figure:: property/release_validation_errors.png
 
 .. topic:: Acivation notes & notifications
 

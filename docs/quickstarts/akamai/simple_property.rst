@@ -183,32 +183,32 @@ Bossman does not deploy from working copy, so we need to commit our changes.
 
 Before deploying this change, we can check the status:
 
-.. image:: simple_property/bossman_from_scratch_status_404.png
+.. figure:: simple_property/bossman_from_scratch_status_404.png
 
 We can create the property and deploy the change from here:
 
-.. image:: simple_property/bossman_from_scratch_create.png
+.. figure:: simple_property/bossman_from_scratch_create.png
 
 And we can look at the status again:
 
-.. image:: simple_property/bossman_from_scratch_status_created.png
+.. figure:: simple_property/bossman_from_scratch_status_created.png
 
 Activating to staging
 ____________________________________
 
 Now we are ready to activate the property to staging.
 
-.. image:: simple_property/bossman_from_scratch_prerelease.png
+.. figure:: simple_property/bossman_from_scratch_prerelease.png
 
 After the process completes, we can check the status again:
 
-.. image:: simple_property/bossman_from_scratch_status_prereleased.png
+.. figure:: simple_property/bossman_from_scratch_status_prereleased.png
 
 We have an indication that v1 is active on the staging network.
 
 And we can see the result of our efforts in Akamai Control Center!
 
-.. image:: simple_property/acc_v1.png
+.. figure:: simple_property/acc_v1.png
 
 Congratulations!
 ____________________________________

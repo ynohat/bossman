@@ -9,19 +9,19 @@ interface to manage the lifecycle of your configuration changes through simple c
 
 * ``bossman apply`` - synchronize git commits to the infrastructure
 
-.. image:: teaser/apply.png
+.. figure:: teaser/apply.png
 
 * ``bossman prerelease --rev 757c0db5 dev*`` - make a specific revision live for testing
 
-.. image:: teaser/prerelease.png
+.. figure:: teaser/prerelease.png
 
 * ``bossman release --rev 757c0db5`` - make a specific revision live to end users
 
-.. image:: teaser/release.png
+.. figure:: teaser/release.png
 
 * ``bossman status`` - show the state of the infrastructure
 
-.. image:: teaser/status.png
+.. figure:: teaser/status.png
 
 Because Bossman is simply built "on top of git", it is possible to implement many workflows with ease.
 
