@@ -25,11 +25,14 @@ setup(
   },
   classifiers=[
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
   ],
   packages=find_namespace_packages(include=['bossman', 'bossman.*']),
   install_requires=requirements,
-  python_requires='>=3.5',
+  python_requires='>=3.8,<4',
   zip_safe=False
 )
