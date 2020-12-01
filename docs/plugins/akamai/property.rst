@@ -84,28 +84,7 @@ In the normal case, property versions are created by bossman and their status li
   to the latest commit on that branch, or brown if it is behind
 * a series of tags pointing at the corresponding commit, coloured blue
 
-.. topic:: Making changes in the UI
-
-  It is entirely acceptable to create new versions in the UI without breaking bossman.
-  If an interesting version was created without using bossman, it will be called out
-  as **dirty**, and will lack any git ref information to relate it to git history :
-
-  .. figure:: property/dirty_status.png
-
-
-  There are two caveats however:
-
-  * **bossman will not be able to activate these versions** - indeed, bossman concerns
-    itself with the deployment and release cycle of *git commits*. By definition, a dirty
-    version is not associated to a commit, and is therefore "out of band"; the recommended
-    approach is then to re-integrate the change into the code
-  * **bossman cannot help with reintegration of changes from dirty versions** - this needs
-    to be done manually and the method will depend largely on how the configurations are
-    maintained as code.
-
-  These aspects are by design and unlikely to change. Bossman acknowledges the need to make
-  occasional changes in the UI, but if it is the primary workflow, then maybe bossman is not
-  the best choice.
+See `Making changes in the UI`_ for more details about handling dirty versions.
 
 ``bossman apply [--force] [glob*]``
 _____________________________________
@@ -172,3 +151,27 @@ If the property version has validation errors, activation is disallowed:
   * ``6d4fcb37`` is the abbreviated commit hash being released
   * ``R41`` is a list of tags pointing at the commit
   * ``jane.doe@acme.org`` is the current git user email
+
+Making changes in the UI
+_____________________________________
+
+It is entirely acceptable to create new versions in the UI without breaking bossman.
+If an interesting version was created without using bossman, it will be called out
+as **dirty**, and will lack any git ref information to relate it to git history :
+
+.. figure:: property/dirty_status.png
+
+There are two caveats however:
+
+* **bossman will not be able to activate these versions** - indeed, bossman concerns
+  itself with the deployment and release cycle of *git commits*. By definition, a dirty
+  version is not associated to a commit, and is therefore "out of band"; the recommended
+  approach is then to re-integrate the change into the code
+* **bossman cannot help with reintegration of changes from dirty versions** - this needs
+  to be done manually and the method will depend largely on how the configurations are
+  maintained as code.
+
+These aspects are by design and unlikely to change. Bossman acknowledges the need to make
+occasional changes in the UI, but if it is the primary workflow, then maybe bossman is not
+the best choice.
+
