@@ -6,6 +6,7 @@ from io import StringIO
 from os import getenv
 from os.path import expanduser, basename, dirname, join
 from collections import OrderedDict
+from types import SimpleNamespace
 import jsonschema
 
 from bossman.cache import cache
@@ -374,23 +375,31 @@ class ResourceType(ResourceTypeABC):
     except RuntimeError as e:
       return PropertyApplyResult(resource, revision, error=e)
 
+    notes = SimpleNamespace(
+      property_id=property_id,
+      property_version=next_version.propertyVersion,
+      etag=None,
+      has_errors=False
+    )
+
     try:
       # first, we apply the hostnames change
       hostnames_result = self.papi.update_property_hostnames(property_id, next_version.propertyVersion, hostnames_json)
+      notes.etag = hostnames_result.etag
+      notes.has_errors = notes.has_errors or hostnames_result.has_errors
       # then, regardless of whether there was a change to the rule tree, we need to update it with
       # the commit message and id, otherwise we will get a dirty status
       rule_tree_result = self.papi.update_property_rule_tree(property_id, next_version.propertyVersion, rules_json)
+      notes.etag = rule_tree_result.etag
+      notes.has_errors = notes.has_errors or rule_tree_result.has_errors
 
-      # Finally, assign the updated values to the git notes
-      revision.get_notes(resource.path).set(
-        property_version=rule_tree_result.propertyVersion,
-        property_id=rule_tree_result.propertyId,
-        etag=rule_tree_result.etag,
-        has_errors=rule_tree_result.has_errors or hostnames_result.has_errors
-      )
       return PropertyApplyResult(resource, revision, next_version, rule_tree=rule_tree_result, hostnames=hostnames_result)
     except RuntimeError as e:
+      notes.has_errors = True
       return PropertyApplyResult(resource, revision, error=e)
+    finally:
+      # Finally, assign the updated values to the git notes
+      revision.get_notes(resource.path).set(**vars(notes))
 
 
   def get_property_version_for_revision_id(self, property_id, revision_id):
