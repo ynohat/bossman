@@ -311,6 +311,9 @@ class Repo:
             # an invalid refspec
             print("Warning: invalid refspec error occurred when running `{}`".format(e._cmdline), file=sys.stderr)
             pass
+          elif "couldn't find remote ref" in e.stderr:
+            # if the remote doesn't know about this ref yet, this can happen; it is fine
+            pass
           elif "authentication failures" in e.stderr:
             raise RepoAuthError("Failed to fetch from remote {}: {}".format(remote, e.stderr))
           else:
@@ -330,6 +333,9 @@ class Repo:
             # if we don't have notes in this namespace we might get
             # an invalid refspec; this should be quite unlikely
             print("Warning: invalid refspec error occurred when running `{}`".format(e._cmdline), file=sys.stderr)
+            pass
+          elif "does not match any" in e.stderr:
+            # if we did not write any notes for this ns, we will get this error
             pass
           elif "authentication failures" in e.stderr:
             raise RepoAuthError("Failed to fetch from remote {}: {}".format(remote, e.stderr))
