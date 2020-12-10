@@ -8,6 +8,22 @@ ____________________________
 
 Bossman requires Python >=3.8 and git >=2.3.10.
 
+.. topic:: Windows
+
+   Bossman should just about run on Windows, but support as it is will be limited.
+   Extra dependencies may be required (pay close attention to the output on the
+   console when installing via pip).
+
+   **It is highly recommended to use either the Windows Subsystem for Linux or Docker
+   when running bossman on windows**.
+
+   The Windows Subsystem for Windows will provide a much smoother than native, but
+   do pay close attention to the warnings on the console.
+
+   In both cases (native or WSL), it is strongly recommended to install the `Windows
+   Terminal <https://docs.microsoft.com/en-us/windows/terminal>`_. The default terminal
+   font does not support all the glyphs used by bossman to convey resource status information.
+
 Installing Locally
 ____________________________
 

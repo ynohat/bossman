@@ -35,10 +35,12 @@ class ResourceManager:
   def get_resources_from_working_copy(self, repo: Repo) -> list:
     from os import walk
     from os.path import relpath, join
+    import pathlib
     paths = []
     for root, dir, files in walk(repo._repo.working_tree_dir):
       for file in files:
-        paths.append(relpath(join(root, file), repo._repo.working_tree_dir))
+        rel = relpath(join(root, file), repo._repo.working_tree_dir)
+        paths.append(str(pathlib.PurePosixPath(pathlib.Path(rel))))
     resources = []
     for resource_type in self.resource_types:
       resources.extend(resource_type.get_resources(paths))

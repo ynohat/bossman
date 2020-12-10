@@ -3,7 +3,7 @@ from bossman.config import ResourceTypeConfig
 from bossman.repo import Repo, Revision
 from bossman.logging import logger
 from bossman.repo import RevisionDetails
-import parse
+import pathlib
 from os.path import relpath, join
 
 class ResourceABC(ABC):

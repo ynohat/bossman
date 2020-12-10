@@ -2,6 +2,7 @@ import re
 import time
 import json
 import random
+import pathlib
 from io import StringIO
 from os import getenv
 from os.path import expanduser, basename, dirname, join
@@ -47,11 +48,13 @@ class PropertyResource(ResourceABC):
 
   @property
   def rules_path(self):
-    return join(self.path, "rules.json")
+    # All operations use unix-style paths; this is important
+    return str(pathlib.PurePosixPath(self.path) / "rules.json")
 
   @property
   def hostnames_path(self):
-    return join(self.path, "hostnames.json")
+    # All operations use unix-style paths; this is important
+    return str(pathlib.PurePosixPath(self.path) / "hostnames.json")
 
   @property
   def paths(self):

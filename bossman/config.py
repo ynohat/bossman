@@ -1,5 +1,4 @@
-import parse, re
-from os import getcwd
+import parse, re, os, pathlib
 from os.path import expanduser, isabs, relpath, abspath, dirname, join
 from bossman.errors import BossmanConfigurationError
 from bossman.logging import logger
