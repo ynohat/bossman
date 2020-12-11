@@ -17,7 +17,7 @@ ________________________________
       options:
         edgerc: ~/.edgerc
         section: papi
-        switch_key: xyz
+        #switch_key: xyz
 
 The above are the default values, applied even if the ``.bossman`` configuration file is
 not present. You only need to configure if you need to depart from the defaults.
