@@ -14,6 +14,7 @@ def init(subparsers: argparse._SubParsersAction):
   parser.set_defaults(func=exec)
 
 def exec(bossman: Bossman, glob, *args, **kwargs):
+  bossman.repo.fetch_notes("*")
   resources = bossman.get_resources(*glob)
   revisions = bossman.get_revisions(resources=resources)
   for revision in revisions:
