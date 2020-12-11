@@ -1,10 +1,20 @@
+import yaml
+from rich.panel import Panel
+from rich.syntax import Syntax
+from rich.padding import Padding
 
 class BossmanError(RuntimeError):
   """
   Base class for bossman-specific runtime errors.
   """
-  def __rich__(self):
-    return "{}: {}".format(self.__class__.__name__, " ".join(str(arg) for arg in self.args))
+  def __rich_console__(self, *args):
+    error_yaml = yaml.safe_dump(self.args)
+    yield Panel(
+      Syntax(error_yaml, "yaml").highlight(error_yaml),
+      title="[bold red]{}[/]".format(type(self).__name__),
+      title_align="left",
+      padding=(0, 0, 0, 4)
+    )
 
 class BossmanConfigurationError(BossmanError):
   """
