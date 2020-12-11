@@ -35,6 +35,6 @@ class Session(requests.Session):
     baseUrl = "https://{host}".format(host=self.edgerc.get(self.section, "host"))
     url = parse.urljoin(baseUrl, url)
     response = super(Session, self).request(method, url, params=params, **kwargs)
-    if response.status_code >= 400:
+    if response.status_code in (400, 401, 403, *range(500, 600)):
       raise EdgegridError(response.json())
     return response
