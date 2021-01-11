@@ -102,6 +102,9 @@ will be displayed, along with a list of errors as reported by the PAPI endpoint:
 
 .. figure:: property/apply_validation_errors.png
 
+If bossman detects that the latest version of the property is ``🛑 dirty``, it will skip applying unless the
+``--force`` flag is also provided.
+
 Bossman structures property version notes, by encoding:
 
 - the commit message
