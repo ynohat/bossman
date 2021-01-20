@@ -435,12 +435,15 @@ class ResourceType(ResourceTypeABC):
     return None
 
   def validate_working_tree(self, resource: PropertyResource):
-    with open(resource.hostnames_path, "r") as hfd:
-      hostnames = hfd.read()
-      self.validate_hostnames(resource, hostnames)
-    with open(resource.rules_path, "r") as hfd:
-      rules = hfd.read()
-      self.validate_rules(resource, rules)
+    try:
+      with open(resource.hostnames_path, "r") as hfd:
+        hostnames = hfd.read()
+        self.validate_hostnames(resource, hostnames)
+      with open(resource.rules_path, "r") as hfd:
+        rules = hfd.read()
+        self.validate_rules(resource, rules)
+    except FileNotFoundError as e:
+      raise PropertyValidationError("file not found {}".format(e.filename))
 
   def validate_rules(self, resource: PropertyResource, rules: str):
     try:
