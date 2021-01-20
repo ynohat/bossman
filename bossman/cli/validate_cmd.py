@@ -1,3 +1,4 @@
+from bossman.errors import BossmanValidationError
 from os import getcwd
 import git
 import argparse
@@ -16,15 +17,19 @@ def exec(bossman: Bossman, glob, *args, **kwargs):
     table = Table()
     table.add_column("Resource")
     table.add_column("Validation")
+    table.add_column("Error")
     for resource in resources:
+      error = ""
       try:
         bossman.validate(resource)
         status = ":thumbs_up:"
-      except:
+      except BossmanValidationError as e:
         status = ":thumbs_down:"
+        error = e
       table.add_row(
         resource,
         status,
+        error
       )
     print(table)
   else:

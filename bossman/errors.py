@@ -29,3 +29,8 @@ class MultipleMatchingPluginsError(BossmanError):
     super(MultipleMatchingPluginsError, self).__init__("Only one plugin should match a resource.")
     self.resource = resource
     self.plugins = plugins
+
+class BossmanValidationError(BossmanError):
+  """
+  Raised by plugins when a resource is invalid.
+  """

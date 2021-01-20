@@ -12,7 +12,7 @@ from types import SimpleNamespace
 import jsonschema
 
 from bossman.cache import cache
-from bossman.errors import BossmanError
+from bossman.errors import BossmanError, BossmanValidationError
 from bossman.abc import ResourceTypeABC
 from bossman.abc import ResourceStatusABC
 from bossman.abc import ResourceABC
@@ -32,7 +32,7 @@ RE_COMMIT = re.compile("^commit: ([a-z0-9]*)", re.MULTILINE)
 
 _cache = cache.key(__name__)
 
-class PropertyError(BossmanError):
+class PropertyValidationError(BossmanValidationError):
   pass
 
 class PropertyNotFoundError(BossmanError):
@@ -335,7 +335,7 @@ class ResourceType(ResourceTypeABC):
       # Get the rules json from the commit
       rules = revision.show_path(resource.rules_path)
       if rules is None:
-        raise PropertyError("missing rule tree")
+        raise PropertyValidationError("missing rule tree")
 
       # before changing anything in PAPI, check that the json files are valid
       rules_json = self.validate_rules(resource, rules)
@@ -451,17 +451,15 @@ class ResourceType(ResourceTypeABC):
       requiredFields = ("groupId", "contractId", "ruleFormat", "productId")
       missing = list(field for field in requiredFields if field not in rules_json)
       if len(missing):
-        raise PropertyError("{}: {} field is required".format(resource.rules_path, ", ".join(missing)))
+        raise PropertyValidationError("{}: {} field is required".format(resource.rules_path, ", ".join(missing)))
 
       schema = self.papi.get_rule_format_schema(rules_json.get("productId"), rules_json.get("ruleFormat"))
       jsonschema.validate(rules_json, schema)
       return rules_json
     except json.decoder.JSONDecodeError as err:
-      self.logger.error("{}: bad rules.json - {}", resource, err.args)
-      raise PropertyError(resource, "bad rules.json", err.args)
+      raise PropertyValidationError("bad rules.json", err.args)
     except jsonschema.ValidationError as err:
-      self.logger.error("{}: invalid rules.json - {}", resource, err.args)
-      raise PropertyError(resource, "invalid rules.json", err.args)
+      raise PropertyValidationError("invalid rules.json", err.message)
 
   def validate_hostnames(self, resource: PropertyResource, hostnames: str):
     try:
@@ -470,11 +468,9 @@ class ResourceType(ResourceTypeABC):
       jsonschema.validate(hostnames_json, schema)
       return hostnames_json
     except json.decoder.JSONDecodeError as err:
-      self.logger.error("{}: bad hostnames.json - {}", resource, err.args)
-      raise PropertyError(resource, "bad hostnames.json", err.args)
+      raise PropertyValidationError("bad hostnames.json", err.args)
     except jsonschema.ValidationError as err:
-      self.logger.error("{}: bad hostnames.json - {}", resource, err.args)
-      raise PropertyError(resource, "invalid hostnames.json", err.args)
+      raise PropertyValidationError("invalid hostnames.json", err.args)
 
   def _release(self, network: str, resource: ResourceABC, revision: Revision, on_update: callable = lambda resource, status, progress: None):
     notes = revision.get_notes(resource.path)
