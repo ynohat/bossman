@@ -1,6 +1,7 @@
 import sys, os
 import requests
 from akamai.edgegrid import EdgeGridAuth, EdgeRc
+from configparser import NoSectionError, NoOptionError
 from bossman.logging import logger
 from bossman.errors import BossmanError
 
@@ -18,15 +19,20 @@ class EdgegridError(BossmanError):
 
 class Session(requests.Session):
   def __init__(self, edgerc, section, switch_key=None, **kwargs):
-    super(Session, self).__init__(**kwargs)
-    self.edgerc = EdgeRc(edgerc)
-    self.section = section
-    self.switch_key = switch_key
-    self.auth = EdgeGridAuth(
-      client_token=self.edgerc.get(section, "client_token"),
-      client_secret=self.edgerc.get(section, "client_secret"),
-      access_token=self.edgerc.get(section, "access_token"),
-    )
+    try:
+      super(Session, self).__init__(**kwargs)
+      self.edgerc = EdgeRc(edgerc)
+      self.section = section
+      self.switch_key = switch_key
+      self.auth = EdgeGridAuth(
+        client_token=self.edgerc.get(section, "client_token"),
+        client_secret=self.edgerc.get(section, "client_secret"),
+        access_token=self.edgerc.get(section, "access_token"),
+      )
+    except NoSectionError as e:
+      raise EdgegridError(e.message)
+    except NoOptionError as e:
+      raise EdgegridError(e.message)
 
   def request(self, method, url, params=None, **kwargs):
     if self.switch_key:

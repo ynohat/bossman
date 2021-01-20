@@ -1,3 +1,4 @@
+from bossman.plugins.akamai.lib.edgegrid import EdgegridError
 import re
 import time
 import json
@@ -345,6 +346,8 @@ class ResourceType(ResourceTypeABC):
       hostnames_json = None
       hostnames = revision.show_path(resource.hostnames_path)
       hostnames_json = self.validate_hostnames(resource, hostnames)
+    except EdgegridError as e:
+      raise e
     except RuntimeError as e:
       return PropertyApplyResult(resource, revision, error=e)
 
