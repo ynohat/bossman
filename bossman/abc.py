@@ -109,6 +109,9 @@ class ResourceTypeABC(ABC):
   def get_resource_status(self, resource: ResourceABC):
     pass
 
+  def affects(self, resource: ResourceABC, revision: Revision) -> bool:
+    return len(set(resource.paths).intersection(revision.affected_paths)) > 0
+
   @abstractmethod
   def is_applied(self, resource: ResourceABC, revision: Revision) -> bool:
     pass

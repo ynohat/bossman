@@ -91,10 +91,14 @@ class Bossman:
     revisions = self.get_revisions(resources=[resource])
     missing = []
     for revision in revisions:
-      if not resource_type.is_applied(resource, revision):
-        missing.append(revision)
-      else:
-        break
+      # The revision may affect a file that is in the resource folder, but
+      # is not managed by the resource. Only add the revision if it actually
+      # affects it.
+      if resource_type.affects(resource, revision):
+        if not resource_type.is_applied(resource, revision):
+          missing.append(revision)
+        else:
+          break
     return list(reversed(missing))
 
   @if_initialized
