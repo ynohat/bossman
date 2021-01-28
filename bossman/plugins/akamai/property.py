@@ -132,7 +132,7 @@ class PropertyStatus(ResourceStatusABC):
       return False
     if self.versions[0].note is not None:
       comments = PropertyVersionComments(self.versions[0].note)
-      if comments.commit and self.repo.rev_exists(comments.commit):
+      if comments.commit:
         return False
     return True
 
