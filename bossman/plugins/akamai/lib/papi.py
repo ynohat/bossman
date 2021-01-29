@@ -11,6 +11,8 @@ _cache = cache.key(__name__)
 
 class PAPIError(BossmanError):
   pass
+class PAPIRuleFormatSchemaNotFoundError(BossmanError):
+  pass
 class PAPIVersionAlreadyActiveError(PAPIError):
   pass
 class PAPIVersionAlreadyActivatingError(PAPIError):
@@ -273,6 +275,10 @@ class PAPIClient:
     if schema is None:
       url = "/papi/v1/schemas/products/{productId}/{ruleFormat}".format(productId=productId, ruleFormat=ruleFormat)
       response = self.session.get(url)
+      if response.status_code == 404:
+        raise PAPIRuleFormatSchemaNotFoundError(response.json())
+      elif response.status_code != 200:
+        raise PAPIError(response.json())
       schema = response.json()
       if ruleFormat != "latest":
         cache.update_json(schema)
@@ -285,6 +291,8 @@ class PAPIClient:
     if schema is None:
       url = "/papi/v1/schemas/request/{request_filename}".format(request_filename=request_filename)
       response = self.session.get(url)
+      if response.status_code != 200:
+        raise PAPIError(response.json())
       schema = response.json()
       cache.update_json(schema)
     return schema
