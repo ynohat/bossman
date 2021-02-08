@@ -462,7 +462,10 @@ class ResourceType(ResourceTypeABC):
     except json.decoder.JSONDecodeError as err:
       raise PropertyValidationError("bad rules.json", err.args)
     except jsonschema.ValidationError as err:
-      raise PropertyValidationError("invalid rules.json", err.message)
+      raise PropertyValidationError("invalid rules.json", {
+        "message": err.message,
+        "path": '/' + '/'.join(str(i) for i in err.absolute_path)
+      })
 
   def validate_hostnames(self, resource: PropertyResource, hostnames: str):
     try:
@@ -473,7 +476,10 @@ class ResourceType(ResourceTypeABC):
     except json.decoder.JSONDecodeError as err:
       raise PropertyValidationError("bad hostnames.json", err.args)
     except jsonschema.ValidationError as err:
-      raise PropertyValidationError("invalid hostnames.json", err.args)
+      raise PropertyValidationError("invalid hostnames.json", {
+        "message": err.message,
+        "path": '/' + '/'.join(str(i) for i in err.absolute_path)
+      })
 
   def _release(self, network: str, resource: ResourceABC, revision: Revision, on_update: callable = lambda resource, status, progress: None):
     notes = revision.get_notes(resource.path)
