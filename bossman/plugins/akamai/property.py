@@ -333,7 +333,7 @@ class ResourceType(ResourceTypeABC):
 
     try:
       # Get the rules json from the commit
-      rules = revision.show_path(resource.rules_path)
+      rules = revision.show_path(resource.rules_path, textconv=True)
       if rules is None:
         raise PropertyValidationError("missing rule tree")
 
@@ -344,7 +344,7 @@ class ResourceType(ResourceTypeABC):
       rules_json.update(comments=str(comments))
 
       hostnames_json = None
-      hostnames = revision.show_path(resource.hostnames_path)
+      hostnames = revision.show_path(resource.hostnames_path, textconv=True)
       hostnames_json = self.validate_hostnames(resource, hostnames)
     except EdgegridError as e:
       raise e

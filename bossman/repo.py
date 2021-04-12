@@ -216,17 +216,26 @@ class Revision:
     with self.repo._lock:
       return self.changes.keys()
 
-  def show_path(self, path) -> dict:
+  def show_path(self, path, textconv=False) -> dict:
     with self.repo._lock:
-      contents = self.show_paths([path])
+      contents = self.show_paths([path], textconv)
       return contents.get(path, None)
 
-  def show_paths(self, paths: list) -> dict:
+  def show_paths(self, paths: list, textconv=False) -> dict:
     with self.repo._lock:
       contents = dict()
       def get_blob_contents(blob):
         if blob.path in paths:
-          contents[blob.path] = blob.data_stream.read()
+          if textconv:
+            contents[blob.path] = self.repo._repo.git.show(
+              '--textconv',
+              '%s:%s' % (
+                self.commit.hexsha,
+                blob.path,
+              ),
+            )
+          else:
+            contents[blob.path] = blob.data_stream.read()
       visitor = TreeVisitor(get_blob_contents)
       visitor(self.commit.tree)
       return contents
