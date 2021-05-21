@@ -266,7 +266,7 @@ class ResourceTypeOptions:
     self.env_prefix = options.get("env_prefix", "")
     self.edgerc = expanduser(environ.get("%sEDGERC" % self.env_prefix, options.get("edgerc", "~/.edgerc")))
     self.section = environ.get("%sEDGERC_SECTION" % self.env_prefix, options.get("section", "papi"))
-    self.switch_key = environ.get("%sEDGERC_SWITCH_KEY", options.get("switch_key", None))
+    self.switch_key = environ.get("%sEDGERC_SWITCH_KEY" % self.env_prefix, options.get("switch_key", None))
 
 class ResourceType(ResourceTypeABC):
   def __init__(self, repo: Repo, config):
