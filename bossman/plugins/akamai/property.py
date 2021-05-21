@@ -262,9 +262,11 @@ class PropertyApplyResult:
 
 class ResourceTypeOptions:
   def __init__(self, options):
-    self.edgerc = expanduser(options.get("edgerc", "~/.edgerc"))
-    self.section = options.get("section", "papi")
-    self.switch_key = options.get("switch_key", None)
+    from os import environ
+    self.env_prefix = options.get("env_prefix", "")
+    self.edgerc = expanduser(environ.get("%sEDGERC" % self.env_prefix, options.get("edgerc", "~/.edgerc")))
+    self.section = environ.get("%sEDGERC_SECTION" % self.env_prefix, options.get("section", "papi"))
+    self.switch_key = environ.get("%sEDGERC_SWITCH_KEY", options.get("switch_key", None))
 
 class ResourceType(ResourceTypeABC):
   def __init__(self, repo: Repo, config):

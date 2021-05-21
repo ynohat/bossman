@@ -17,6 +17,7 @@ ________________________________
       options:
         edgerc: ~/.edgerc
         section: papi
+        #env_prefix: ""
         #switch_key: xyz
 
 The above are the default values, applied even if the ``.bossman`` configuration file is
@@ -28,6 +29,35 @@ the name of the property to be managed.
 
 The next section details the structure of the resource, the files Bossman expects to find
 within the property configuration folder.
+
+It is also possible to pass values from the environment. Supported variables include:
+
+* ``EDGERC`` : path to the edgerc file
+* ``EDGERC_SECTION`` : section within the edgerc file
+* ``EDGERC_SWITCH_KEY`` : account switch key, if applicable
+
+Values passed from the environment take precedence over the configuration file if specified.
+
+If multiple resource groups are present and require different credentials, it is possible to
+specify ``env_prefix`` in the configuration file. For example, if you have this configuration:
+
+.. code-block:: yaml
+
+  resources:
+    - module: bossman.plugins.akamai.property
+      pattern: akamai/property/prod/{name}
+      options:
+        edgerc: ~/.edgerc
+        env_prefix: PROD_
+    - module: bossman.plugins.akamai.property
+      pattern: akamai/property/preprod/{name}
+      options:
+        edgerc: ~/.edgerc
+        env_prefix: PREPROD_
+
+You can specify a different section (or even a different config file or switch key) like this::
+
+  PROD_EDGERC_SECTION=prod PREPROD_EDGERC_SECTION=preprod bossman status
 
 Resource Structure
 ________________________________
