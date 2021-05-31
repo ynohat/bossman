@@ -16,6 +16,7 @@ from bossman.errors import BossmanError, BossmanValidationError
 from bossman.abc import ResourceTypeABC
 from bossman.abc import ResourceStatusABC
 from bossman.abc import ResourceABC
+from bossman.abc import ResourceApplyResultABC
 from bossman.repo import Repo, Revision, RevisionDetails
 from bossman.plugins.akamai.lib.papi import (
   PAPIClient,
@@ -213,7 +214,7 @@ class PropertyStatus(ResourceStatusABC):
 
         yield " ".join(parts)
 
-class PropertyApplyResult:
+class PropertyApplyResult(ResourceApplyResultABC):
   def __init__(self,
               resource: PropertyResource,
               revision: Revision,
@@ -227,6 +228,10 @@ class PropertyApplyResult:
     self.rule_tree = rule_tree
     self.hostnames = hostnames
     self.error = error
+
+  @property
+  def had_errors(self) -> bool:
+    return self.error != None or (self.hostnames and self.hostnames.has_errors) or (self.rule_tree and self.rule_tree.has_errors)
 
   def __rich_console__(self, *args, **kwargs):
     parts = []
@@ -313,6 +318,12 @@ class ResourceType(ResourceTypeABC):
     except PAPIError as e:
       return PropertyStatus(self.repo, resource, [], error=e)
 
+  def is_pending(self, resource: PropertyResource, revision: Revision):
+    notes = revision.get_notes(resource.path)
+    if notes.get("has_errors", False):
+      return False
+    return not self.is_applied(resource, revision)
+
   def is_applied(self, resource: PropertyResource, revision: Revision):
     notes = revision.get_notes(resource.path)
     property_version = notes.get("property_version", None)
@@ -329,9 +340,16 @@ class ResourceType(ResourceTypeABC):
       raise PropertyNotFoundError(property_name, "not found")
     return property_id
 
-  def apply_change(self, resource: PropertyResource, revision: Revision, previous_revision: Revision=None):
+  def apply_change(self, resource: PropertyResource, revision: Revision, previous_revision: Revision=None) -> PropertyApplyResult:
     # we should only call this function if the Revision concerns the resource
     assert len(set(resource.paths).intersection(revision.affected_paths)) > 0
+
+    notes = SimpleNamespace(
+      property_id=None,
+      property_version=None,
+      etag=None,
+      has_errors=False
+    )
 
     try:
       # Get the rules json from the commit
@@ -350,7 +368,9 @@ class ResourceType(ResourceTypeABC):
       hostnames_json = self.validate_hostnames(resource, hostnames)
     except EdgegridError as e:
       raise e
-    except RuntimeError as e:
+    except (PropertyValidationError, RuntimeError) as e:
+      notes.has_errors = True
+      revision.get_notes(resource.path).set(**vars(notes))
       return PropertyApplyResult(resource, revision, error=e)
 
     latest_version = next_version = None
@@ -383,12 +403,8 @@ class ResourceType(ResourceTypeABC):
     except RuntimeError as e:
       return PropertyApplyResult(resource, revision, error=e)
 
-    notes = SimpleNamespace(
-      property_id=property_id,
-      property_version=next_version.propertyVersion,
-      etag=None,
-      has_errors=False
-    )
+    notes.property_id = property_id
+    notes.property_version = next_version.propertyVersion
 
     try:
       # first, we apply the hostnames change
@@ -404,6 +420,7 @@ class ResourceType(ResourceTypeABC):
       return PropertyApplyResult(resource, revision, next_version, rule_tree=rule_tree_result, hostnames=hostnames_result)
     except RuntimeError as e:
       notes.has_errors = True
+      revision.get_notes(resource.path).set(**vars(notes))
       return PropertyApplyResult(resource, revision, error=e)
     finally:
       # Finally, assign the updated values to the git notes

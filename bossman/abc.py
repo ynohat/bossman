@@ -61,6 +61,16 @@ class ResourceStatusABC(ABC):
 
 
 
+class ResourceApplyResultABC(ABC):
+  @abstractproperty
+  def had_errors(self) -> bool:
+    """
+    Return True if any errors occurred applying a change to the resource.
+    """
+    pass
+
+
+
 class ResourceTypeABC(ABC):
   """
   Abstract class for resource_types.
@@ -113,7 +123,21 @@ class ResourceTypeABC(ABC):
     return len(set(resource.paths).intersection(revision.affected_paths)) > 0
 
   @abstractmethod
+  def is_pending(self, resource: ResourceABC, revision: Revision) -> bool:
+    """
+    Returns True if the given {revision} is missing from the {resource}, serving as an
+    indication to bossman that it should apply it.
+
+    The implementation will return False if a previous apply was attempted but failed
+    because the contents of {revision} are invalid.
+    """
+    pass
+
+  @abstractmethod
   def is_applied(self, resource: ResourceABC, revision: Revision) -> bool:
+    """
+    Returns True if the given {revision} has been successfully applied to the {resource}.
+    """
     pass
 
   @abstractmethod
@@ -125,7 +149,7 @@ class ResourceTypeABC(ABC):
     pass
 
   @abstractmethod
-  def apply_change(self, resource: ResourceABC, revision: Revision, previous_revision: Revision):
+  def apply_change(self, resource: ResourceABC, revision: Revision, previous_revision: Revision) -> ResourceApplyResultABC:
     pass
 
   @abstractmethod
@@ -139,5 +163,4 @@ class ResourceTypeABC(ABC):
   @abstractmethod
   def release(self, resource: ResourceABC, revision: Revision, on_update: callable = lambda status, progress: None):
     pass
-
 

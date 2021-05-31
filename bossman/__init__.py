@@ -95,7 +95,7 @@ class Bossman:
       # is not managed by the resource. Only add the revision if it actually
       # affects it.
       if resource_type.affects(resource, revision):
-        if not resource_type.is_applied(resource, revision):
+        if resource_type.is_pending(resource, revision):
           missing.append(revision)
         else:
           break
