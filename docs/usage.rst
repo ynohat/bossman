@@ -145,3 +145,15 @@ __________________________________________________________
 __________________________________________________________
 
 Outputs the revision history of the selected resources.
+
+
+Usage from CI
+__________________________________________________________
+
+It is possible to use ``bossman`` from automation, but the ``bossman (pre)release`` commands
+require confirmation before they do anything, and expect to be run attended in a terminal, by default.
+
+In automation, you will want to bypass confirmation, which can be done like this::
+
+  bossman prerelease --yes
+  bossman release --yes
