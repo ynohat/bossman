@@ -16,16 +16,17 @@ console = get_console()
 def init(subparsers: argparse._SubParsersAction):
   parser = subparsers.add_parser("apply", help="apply local changes to remotes")
   parser.add_argument("--force", action="store_true", default=False, help="don't skip dirty resources")
+  parser.add_argument("--since", default=None, help="apply only revisions since this commit ref (useful to skip early history)")
   parser.add_argument("glob", nargs="*", default="*", help="select resources by glob pattern")
   parser.set_defaults(func=exec)
 
-def exec(bossman: Bossman, glob, force=False, **kwargs):
+def exec(bossman: Bossman, glob, force=False, since=None, **kwargs):
   resources = bossman.get_resources(*glob)
   futures = []
   had_errors = False
   with ThreadPoolExecutor(10, "apply") as executor:
     for resource in resources:
-      futures.append(executor.submit(apply_changes, bossman, resource, force))
+      futures.append(executor.submit(apply_changes, bossman, resource, force, since))
   for resource, future in zip(resources, futures):
     try:
       had_errors = future.result() or had_errors
@@ -38,10 +39,10 @@ def exec(bossman: Bossman, glob, force=False, **kwargs):
     print("[red]apply completed, but some errors occurred[/red]")
     sys.exit(3)
 
-def apply_changes(bossman: Bossman, resource: ResourceABC, force: bool):
+def apply_changes(bossman: Bossman, resource: ResourceABC, force: bool, since: str):
   try:
     status = bossman.get_resource_status(resource)
-    revisions = bossman.get_missing_revisions(resource)
+    revisions = bossman.get_missing_revisions(resource, since_rev=since)
     todo = len(revisions)
     had_errors = False
     if todo > 0:

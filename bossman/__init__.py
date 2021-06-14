@@ -86,9 +86,9 @@ class Bossman:
     return list(sorted(filter(match, resources)))
 
   @if_initialized
-  def get_missing_revisions(self, resource: ResourceABC) -> list:
+  def get_missing_revisions(self, resource: ResourceABC, since_rev: str = None) -> list:
     resource_type = self.resource_manager.get_resource_type(resource.path)
-    revisions = self.get_revisions(resources=[resource])
+    revisions = self.get_revisions(resources=[resource], since_rev=since_rev)
     missing = []
     for revision in revisions:
       # The revision may affect a file that is in the resource folder, but

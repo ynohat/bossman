@@ -114,10 +114,28 @@ __________________________________________________________
 
 Provides synthetic information about the state of resources managed by bossman.
 
-``bossman apply [glob*]``
+``bossman apply [--since=commit] [glob*]``
 __________________________________________________________
 
 Deploys all pending commits.
+
+``--since`` limits deployment to commits after the given commit ref.
+
+This should be avoided in general, since the default behavior is what one wants. It can be useful
+in some cases to avoid extraneous deployments on e.g. long lived branches, which should never be
+rebased.
+
+Note that ``--since`` will deploy all commits *after* the given commit, non-inclusive.
+
+For example:
+
+Deploy the latest commit on the current branch::
+
+  bossman apply --since HEAD^
+
+Deploy all the commits after ``integration`` was merged to the current branch::
+
+  bossman apply --since integration
 
 ``bossman validate [glob*]``
 __________________________________________________________
