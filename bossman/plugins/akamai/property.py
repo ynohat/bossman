@@ -461,7 +461,7 @@ class ResourceType(ResourceTypeABC):
       with open(resource.rules_path, "r") as hfd:
         rules = hfd.read()
         self.validate_rules(resource, rules)
-    except FileNotFoundError as e:
+    except (NotADirectoryError, FileNotFoundError) as e:
       raise PropertyValidationError("file not found {}".format(e.filename))
 
   def validate_rules(self, resource: PropertyResource, rules: str):
