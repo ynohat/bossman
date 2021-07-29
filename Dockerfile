@@ -39,7 +39,7 @@ RUN apk add --no-cache git upx \
 # FINAL
 #########
 
-FROM python:3-alpine3.11
+FROM python:3.8-alpine3.11
 
 COPY --from=akamai-cli /akamai.upx /bin/akamai
 COPY --from=jsonnet /jsonnet.upx /usr/bin/jsonnet
