@@ -1,3 +1,4 @@
+import sys
 from bossman.errors import BossmanValidationError
 from os import getcwd
 import git
@@ -18,6 +19,7 @@ def exec(bossman: Bossman, glob, *args, **kwargs):
     table.add_column("Resource")
     table.add_column("Validation")
     table.add_column("Error")
+    error_recorded = 0
     for resource in resources:
       error = ""
       try:
@@ -26,11 +28,14 @@ def exec(bossman: Bossman, glob, *args, **kwargs):
       except BossmanValidationError as e:
         status = ":thumbs_down:"
         error = e
+        error_recorded = 1
       table.add_row(
         resource,
         status,
         error
       )
     print(table)
+    if error_recorded == 1:
+      sys.exit(1)
   else:
     print("No resources to show: check the glob pattern if provided, or the configuration.")
