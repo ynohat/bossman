@@ -4,5 +4,6 @@ gitpython
 pyyaml
 parse
 rich>=6
-jsonschema>=3.2.0
+# constrain to 3.x because of https://github.com/ynohat/bossman/issues/12
+jsonschema>=3.2.0,<4.0.0
 packaging
