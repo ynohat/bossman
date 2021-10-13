@@ -32,6 +32,7 @@ setup(
     "Operating System :: OS Independent",
   ],
   packages=find_namespace_packages(include=['bossman', 'bossman.*']),
+  package_data={'bossman.plugins.akamai.cloudlet_v3': ['schemas/*.json']},
   install_requires=requirements,
   python_requires='>=3.8,<4',
   zip_safe=False

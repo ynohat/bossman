@@ -1,0 +1,170 @@
+{
+  "$schema" : "http://json-schema.org/draft-04/schema#",
+  "title" : "AUDIENCE SEGMENTATION MATCH RULE",
+  "description" : "applied to create/update match rule requests for AS cloudlets, where requests are of the form: POST|PUT /api/v2/policies/{policyId}/versions/{versionId}/rules/{ruleId}",
+  "version" : "1.0",
+  "type" : "object",
+  "definitions" : {
+    "matchRuleType" : {
+      "type" : "object",
+      "properties" : {
+        "name" : {
+          "type" : [ "string", "null" ],
+          "maxLength" : 8192
+        },
+        "type" : {
+          "type" : "string",
+          "enum" : [ "asMatchRule" ]
+        },
+        "start" : {
+          "type" : "integer",
+          "minimum" : 0
+        },
+        "end" : {
+          "type" : "integer",
+          "minimum" : 0
+        },
+        "id" : {
+          "type" : [ "integer", "null" ]
+        },
+        "matches" : {
+          "type" : [ "array", "null" ],
+          "items" : {
+            "$ref" : "#/definitions/matchCriteriaType"
+          }
+        },
+        "disabled" : {
+          "type" : "boolean"
+        },
+        "akaRuleId" : {
+          "type" : "string"
+        },
+        "matchURL" : {
+          "type" : [ "string", "null" ],
+          "maxLength" : 8192
+        },
+        "forwardSettings" : {
+          "type" : "object",
+          "properties" : {
+            "pathAndQS" : {
+              "type" : "string",
+              "minLength" : 1,
+              "maxLength" : 8192
+            },
+            "useIncomingQueryString" : {
+              "type" : "boolean"
+            },
+            "originId" : {
+              "type" : [ "string", "null" ],
+              "maxLength" : 8192
+            }
+          },
+          "additionalProperties" : false
+        }
+      },
+      "additionalProperties" : false,
+      "required" : [ "type" ]
+    },
+    "matchCriteriaType" : {
+      "type" : "object",
+      "properties" : {
+        "caseSensitive" : {
+          "type" : "boolean"
+        },
+        "matchValue" : {
+          "type" : "string",
+          "minLength" : 1,
+          "maxLength" : 8192
+        },
+        "negate" : {
+          "type" : "boolean"
+        },
+        "matchOperator" : {
+          "type" : "string",
+          "enum" : [ "contains", "exists", "equals" ]
+        },
+        "matchType" : {
+          "type" : "string",
+          "enum" : [ "header", "hostname", "path", "extension", "query", "range", "regex", "cookie", "deviceCharacteristics", "clientip", "continent", "countrycode", "regioncode", "protocol", "method", "proxy" ]
+        },
+        "checkIPs" : {
+          "type" : "string",
+          "enum" : [ null, "CONNECTING_IP", "XFF_HEADERS", "CONNECTING_IP XFF_HEADERS" ]
+        },
+        "objectMatchValue" : {
+          "$ref" : "#/definitions/objectMatchValueType"
+        }
+      },
+      "oneOf" : [ {
+        "required" : [ "matchType", "matchValue" ]
+      }, {
+        "required" : [ "matchType", "objectMatchValue" ]
+      } ],
+      "additionalProperties" : false
+    },
+    "objectMatchValueRangeOrSimpleSubtype" : {
+      "type" : "object",
+      "properties" : {
+        "type" : {
+          "type" : "string",
+          "enum" : [ "range", "simple" ]
+        },
+        "value" : {
+          "type" : [ "array", "null" ]
+        }
+      },
+      "required" : [ "type", "value" ],
+      "additionalProperties" : false
+    },
+    "objectMatchValueObjectSubtype" : {
+      "type" : "object",
+      "properties" : {
+        "name" : {
+          "type" : "string",
+          "minLength" : 1,
+          "maxLength" : 8192
+        },
+        "type" : {
+          "type" : "string",
+          "enum" : [ "object" ]
+        },
+        "nameCaseSensitive" : {
+          "type" : "boolean"
+        },
+        "nameHasWildcard" : {
+          "type" : "boolean"
+        },
+        "options" : {
+          "type" : "object",
+          "properties" : {
+            "value" : {
+              "type" : [ "array", "null" ]
+            },
+            "valueHasWildcard" : {
+              "type" : "boolean"
+            },
+            "valueCaseSensitive" : {
+              "type" : "boolean"
+            },
+            "valueEscaped" : {
+              "type" : "boolean"
+            }
+          },
+          "additionalProperties" : false
+        }
+      },
+      "required" : [ "name", "type" ],
+      "additionalProperties" : false
+    },
+    "objectMatchValueType" : {
+      "type" : "object",
+      "oneOf" : [ {
+        "$ref" : "#/definitions/objectMatchValueRangeOrSimpleSubtype"
+      }, {
+        "$ref" : "#/definitions/objectMatchValueObjectSubtype"
+      } ]
+    }
+  },
+  "location" : "match_rule-AS-1.0.json",
+  "$ref" : "#/definitions/matchRuleType"
+}
