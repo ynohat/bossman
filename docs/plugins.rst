@@ -8,3 +8,4 @@ Plugins
    :caption: Contents:
 
    plugins/akamai/property
+   plugins/akamai/cloudlets_v3

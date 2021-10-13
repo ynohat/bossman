@@ -21,6 +21,15 @@ _DEFAULT_RESOURCE_TYPES = (
       "switch_key": getenv("AKAMAI_EDGERC_SWITCHKEY", None),
     }
   },
+  {
+    "module": "bossman.plugins.akamai.cloudlet_v3",
+    "pattern": "akamai/cloudlet/{name}",
+    "options": {
+      "edgerc": getenv("AKAMAI_EDGERC", expanduser("~/.edgerc")),
+      "section": getenv("AKAMAI_EDGERC_SECTION", "default"),
+      "switch_key": getenv("AKAMAI_EDGERC_SWITCHKEY", None),
+    }
+  },
 )
 
 class PathPatternMatch:

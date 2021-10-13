@@ -1,0 +1,26 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "file://match-rule.json",
+  "type": "array",
+  "description": "A list of Cloudlet-specific match rules for this shared policy. Currently, you can create match rules only for the Edge Redirector, Forward Rewrite, and Audience Segmentation Cloudlets. ",
+  "oneOf": [
+    {
+      "type": "array",
+      "items": {
+        "$ref": "file://match_rule-ER-1.0.json"
+      }
+    },
+    {
+      "type": "array",
+      "items": {
+        "$ref": "file://match_rule-AS-1.0.json"
+      }
+    },
+    {
+      "type": "array",
+      "items": {
+        "$ref": "file://match_rule-FR-1.0.json"
+      }
+    }
+  ]
+}
