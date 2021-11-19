@@ -116,7 +116,7 @@ In the normal case, property versions are created by bossman and their status li
 
 See `Making changes in the UI`_ for more details about handling dirty versions.
 
-``bossman apply [--force] [glob*]``
+``bossman apply [--force] [--dry-run] [--since=commit] [glob*]``
 _____________________________________
 
 The ``apply`` command creates a new version for every commit on the current branch.

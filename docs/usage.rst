@@ -114,7 +114,7 @@ __________________________________________________________
 
 Provides synthetic information about the state of resources managed by bossman.
 
-``bossman apply [--since=commit] [glob*]``
+``bossman apply [--force] [--dry-run] [--since=commit] [glob*]``
 __________________________________________________________
 
 Deploys all pending commits.
@@ -136,6 +136,11 @@ Deploy the latest commit on the current branch::
 Deploy all the commits after ``integration`` was merged to the current branch::
 
   bossman apply --since integration
+
+``--dry-run`` simply evaluates which revisions would be deployed, without performing any action.
+
+``--force`` indicates that the plugin should apply a change even if it might be unsafe. The implementation
+and interpretation of "unsafe" is dependent on the plugin itself.
 
 ``bossman validate [glob*]``
 __________________________________________________________

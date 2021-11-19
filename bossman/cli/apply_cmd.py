@@ -16,17 +16,18 @@ console = get_console()
 def init(subparsers: argparse._SubParsersAction):
   parser = subparsers.add_parser("apply", help="apply local changes to remotes")
   parser.add_argument("--force", action="store_true", default=False, help="don't skip dirty resources")
+  parser.add_argument("--dry-run", action="store_true", default=False, help="show what would be applied, but don't actually do anything")
   parser.add_argument("--since", default=None, help="apply only revisions since this commit ref (useful to skip early history)")
   parser.add_argument("glob", nargs="*", default="*", help="select resources by glob pattern")
   parser.set_defaults(func=exec)
 
-def exec(bossman: Bossman, glob, force=False, since=None, **kwargs):
+def exec(bossman: Bossman, glob, force:bool, dry_run:bool, since, **kwargs):
   resources = bossman.get_resources(*glob)
   futures = []
   had_errors = False
   with ThreadPoolExecutor(10, "apply") as executor:
     for resource in resources:
-      futures.append(executor.submit(apply_changes, bossman, resource, force, since))
+      futures.append(executor.submit(apply_changes, bossman, resource, force, dry_run, since))
   for resource, future in zip(resources, futures):
     try:
       had_errors = future.result() or had_errors
@@ -39,7 +40,7 @@ def exec(bossman: Bossman, glob, force=False, since=None, **kwargs):
     print("[red]apply completed, but some errors occurred[/red]")
     sys.exit(3)
 
-def apply_changes(bossman: Bossman, resource: ResourceABC, force: bool, since: str):
+def apply_changes(bossman: Bossman, resource: ResourceABC, force: bool, dry_run: bool, since: str):
   try:
     status = bossman.get_resource_status(resource)
     revisions = bossman.get_missing_revisions(resource, since_rev=since)
@@ -52,7 +53,7 @@ def apply_changes(bossman: Bossman, resource: ResourceABC, force: bool, since: s
       results = []
       for revision in revisions:
         try:
-          results.append(bossman.apply_change(resource, revision))
+          results.append(bossman.apply_change(resource, revision, dry_run))
         except Exception as e:
           if not force:
             raise e

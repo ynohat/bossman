@@ -7,7 +7,7 @@ from rich.progress import Progress
 
 from bossman.errors import BossmanError
 from bossman.resources import ResourceManager
-from bossman.abc import ResourceStatusABC
+from bossman.abc import ResourceApplyResultABC, ResourceStatusABC
 from bossman.abc import ResourceTypeABC
 from bossman.abc import ResourceABC
 from bossman.config import Config, ResourceTypeConfig
@@ -21,6 +21,31 @@ def if_initialized(func):
       return func(bossman, *args, **kwargs)
     raise BossmanError("Repository not initialized or needs migration, please run `bossman init`.")
   return wrapper
+
+class DryRunApplyResult(ResourceApplyResultABC):
+  def __init__(self, resource: ResourceABC, revision: Revision):
+    self.resource = resource
+    self.revision = revision
+
+  @property
+  def had_errors(self) -> bool:
+    """
+    Return True if any errors occurred applying a change to the resource.
+    """
+    return False
+
+  def __rich_console__(self, *args, **kwargs):
+    parts = []
+    parts.append(r'[dark_orange3](--dry-run)[/]')
+    parts.append(r':arrow_up:')
+    parts.append(self.resource.__rich__())
+    parts.append(r'[grey53][{h}][/]'.format(h=self.revision.id))
+    if self.revision.short_message:
+      parts.append(r'[bright_white]"{subject_line}"[/]'.format(subject_line=self.revision.short_message))
+    author = self.revision.author_name
+    if author:
+      parts.append("[grey53]{}[/]".format(author))
+    yield " ".join(parts)
 
 class Bossman:
   def __init__(self, root, config: Config):
@@ -138,7 +163,9 @@ class Bossman:
     return self.repo.get_revisions(since_rev, until_rev, resources)
 
   @if_initialized
-  def apply_change(self, resource: ResourceABC, revision: Revision):
+  def apply_change(self, resource: ResourceABC, revision: Revision, dry_run: bool):
+    if dry_run:
+      return DryRunApplyResult(resource, revision)
     self.repo.fetch_notes(resource.path)
     previous_revision = self.repo.get_last_revision(resource.paths, revision.parent_id)
     resource_type = self.resource_manager.get_resource_type(resource.path)
