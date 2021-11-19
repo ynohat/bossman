@@ -237,7 +237,7 @@ class PropertyApplyResult(ResourceApplyResultABC):
     parts = []
     parts.append(r':arrow_up:')
     parts.append(self.resource.__rich__())
-    parts.append(r'[grey53]\[{h}][/]'.format(h=self.revision.id))
+    parts.append(r'[grey53][{h}][/]'.format(h=self.revision.id))
     if self.property_version:
       parts.append(r'[grey53]v{version}[/]'.format(version=self.property_version.propertyVersion))
     if self.revision.short_message:
