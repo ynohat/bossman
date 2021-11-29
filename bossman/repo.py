@@ -481,7 +481,19 @@ class Repo:
     commitRange = ("{since_rev}..{until_rev}".format(since_rev=since_rev, until_rev=until_rev)
       if since_rev
       else until_rev)
-    commits = self._repo.iter_commits(commitRange, paths=paths)
+
+    # Traversing history with merge support. If we have history like this:
+    #
+    # *  a051acd (HEAD -> main) Merge branch 'test' into main
+    # |\  
+    # | * 8303358 (test) cache css/jss for 30d
+    # | * 96a1826 cache errors for 74s
+    # |/  
+    # * 4bbe5f0 (origin/main) update README
+    #
+    # We will traverse directly from a051acd to 4bbe5f0. For bossman, this means
+    # that merge commits can effectively be used as release commits.
+    commits = self._repo.iter_commits(commitRange, paths=paths, first_parent=True)
     revisions = []
     for commit in commits:
       prev = git.NULL_TREE
