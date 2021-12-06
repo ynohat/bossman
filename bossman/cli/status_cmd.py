@@ -8,11 +8,12 @@ from bossman.abc import ResourceStatusABC
 
 def init(subparsers: argparse._SubParsersAction):
   parser = subparsers.add_parser("status", help="show resource status")
+  parser.add_argument("-e", "--exact-match", action="store_true", default=False, help="match resource exactly")
   parser.add_argument("glob", nargs="*", default="*", help="select resources by glob pattern")
   parser.set_defaults(func=exec)
 
-def exec(bossman: Bossman, glob, *args, **kwargs):
-  resources = bossman.get_resources(*glob)
+def exec(bossman: Bossman, glob, exact_match:bool, *args, **kwargs):
+  resources = bossman.get_resources(*glob, exact_match=exact_match)
   if len(resources):
     print("On branch", bossman.get_current_branch())
 

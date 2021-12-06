@@ -9,11 +9,12 @@ from bossman import Bossman
 
 def init(subparsers: argparse._SubParsersAction):
   parser = subparsers.add_parser("validate", help="validates the working tree")
+  parser.add_argument("-e", "--exact-match", action="store_true", default=False, help="match resource exactly")
   parser.add_argument("glob", nargs="*", default="*", help="select resources by glob pattern")
   parser.set_defaults(func=exec)
 
-def exec(bossman: Bossman, glob, *args, **kwargs):
-  resources = bossman.get_resources_from_working_copy(*glob)
+def exec(bossman: Bossman, glob, exact_match:bool, *args, **kwargs):
+  resources = bossman.get_resources_from_working_copy(*glob, exact_match=exact_match)
   if len(resources):
     table = Table()
     table.add_column("Resource")

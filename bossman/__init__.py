@@ -22,6 +22,19 @@ def if_initialized(func):
     raise BossmanError("Repository not initialized or needs migration, please run `bossman init`.")
   return wrapper
 
+def get_resources(resources, globs, exact=False) -> list:
+  if exact:
+    # exact match on filename
+    globs = list(globs)
+  else:
+    # enable partial matches
+    globs = list("*" + glob.strip("*") + "*" for glob in globs)
+  # by default, all resources
+  if len(globs) == 0:
+    globs = globs.append("*")
+  match = lambda resource: any(fnmatch(resource.path, glob) for glob in globs)
+  return list(sorted(filter(match, resources)))
+
 class DryRunApplyResult(ResourceApplyResultABC):
   def __init__(self, resource: ResourceABC, revision: Revision):
     self.resource = resource
@@ -87,28 +100,14 @@ class Bossman:
 
 
   @if_initialized
-  def get_resources(self, *globs, rev: str = "HEAD") -> list:
+  def get_resources(self, *globs, rev: str = "HEAD", exact_match: bool = False) -> list:
     resources = self.resource_manager.get_resources(self.repo, rev)
-    globs = list(globs)
-    # by default, all resources
-    if len(globs) == 0:
-      globs = globs.append("*")
-    # enable partial matches
-    globs = list("*" + glob.strip("*") + "*" for glob in globs)
-    match = lambda resource: any(fnmatch(resource.path, glob) for glob in globs)
-    return list(sorted(filter(match, resources)))
+    return get_resources(resources, list(globs), exact_match)
 
   @if_initialized
-  def get_resources_from_working_copy(self, *globs) -> list:
+  def get_resources_from_working_copy(self, *globs, exact_match: bool = False) -> list:
     resources = self.resource_manager.get_resources_from_working_copy(self.repo)
-    globs = list(globs)
-    # by default, all resources
-    if len(globs) == 0:
-      globs = globs.append("*")
-    # enable partial matches
-    globs = list("*" + glob.strip("*") + "*" for glob in globs)
-    match = lambda resource: any(fnmatch(resource.path, glob) for glob in globs)
-    return list(sorted(filter(match, resources)))
+    return get_resources(resources, list(globs), exact_match)
 
   @if_initialized
   def get_missing_revisions(self, resource: ResourceABC, since_rev: str = None) -> list:

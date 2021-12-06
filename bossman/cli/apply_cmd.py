@@ -15,14 +15,15 @@ console = get_console()
 
 def init(subparsers: argparse._SubParsersAction):
   parser = subparsers.add_parser("apply", help="apply local changes to remotes")
+  parser.add_argument("-e", "--exact-match", action="store_true", default=False, help="match resource exactly")
   parser.add_argument("--force", action="store_true", default=False, help="don't skip dirty resources")
   parser.add_argument("--dry-run", action="store_true", default=False, help="show what would be applied, but don't actually do anything")
   parser.add_argument("--since", default=None, help="apply only revisions since this commit ref (useful to skip early history)")
   parser.add_argument("glob", nargs="*", default="*", help="select resources by glob pattern")
   parser.set_defaults(func=exec)
 
-def exec(bossman: Bossman, glob, force:bool, dry_run:bool, since, **kwargs):
-  resources = bossman.get_resources(*glob)
+def exec(bossman: Bossman, glob, exact_match:bool, force:bool, dry_run:bool, since, **kwargs):
+  resources = bossman.get_resources(*glob, exact_match=exact_match)
   futures = []
   had_errors = False
   with ThreadPoolExecutor(10, "apply") as executor:

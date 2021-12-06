@@ -10,12 +10,13 @@ console = Console()
 
 def init(subparsers: argparse._SubParsersAction):
   parser = subparsers.add_parser("log", help="show resource change history")
+  parser.add_argument("-e", "--exact-match", action="store_true", default=False, help="match resource exactly")
   parser.add_argument("glob", nargs="*", default="*", help="select resources by glob pattern")
   parser.set_defaults(func=exec)
 
-def exec(bossman: Bossman, glob, *args, **kwargs):
+def exec(bossman: Bossman, glob, exact_match:bool, *args, **kwargs):
   bossman.repo.fetch_notes("*")
-  resources = bossman.get_resources(*glob)
+  resources = bossman.get_resources(*glob, exact_match=exact_match)
   revisions = bossman.get_revisions(resources=resources)
   for revision in revisions:
     view = RevisionView(bossman, revision, resources)
