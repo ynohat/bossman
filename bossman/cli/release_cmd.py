@@ -16,19 +16,21 @@ console = Console()
 
 def init(subparsers: argparse._SubParsersAction):
   prerelease_parser = subparsers.add_parser("prerelease", help="prerelease applicable resources")
+  prerelease_parser.add_argument("-e", "--exact-match", action="store_true", default=False, help="match resource exactly")
   prerelease_parser.add_argument("--yes", action="store_true", default=False, help="don't prompt")
   prerelease_parser.add_argument("--rev", required=False, default="HEAD", help="commit id or git ref to prerelease")
   prerelease_parser.add_argument("glob", nargs="*", default="*", help="select resources by glob pattern")
   prerelease_parser.set_defaults(func=exec, action="prerelease")
 
   release_parser = subparsers.add_parser("release", help="release applicable resources")
+  release_parser.add_argument("-e", "--exact-match", action="store_true", default=False, help="match resource exactly")
   release_parser.add_argument("--yes", action="store_true", default=False, help="don't prompt")
   release_parser.add_argument("--rev", required=False, default="HEAD", help="commit id or git ref to release")
   release_parser.add_argument("glob", nargs="*", default="*", help="select resources by glob pattern")
   release_parser.set_defaults(func=exec, action="release")
 
-def exec(bossman: Bossman, yes, rev, glob, action, *args, **kwargs):
-  resources = bossman.get_resources(*glob)
+def exec(bossman: Bossman, yes, rev, glob, exact_match:bool, action, *args, **kwargs):
+  resources = bossman.get_resources(*glob, exact_match=exact_match)
   revision = bossman.get_revision(rev, resources)
 
   console.print("Preparing to {}:".format(action))
