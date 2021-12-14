@@ -155,9 +155,10 @@ class PAPIClient:
     self.logger.debug("get_property_id propertyName={propertyName}".format(propertyName=propertyName))
     property_id = None
     response = self.session.post("/papi/v1/search/find-by-value", json={"propertyName": propertyName})
-    versions = list(PAPIPropertyVersion(**item) for item in response.json().get("versions").get("items"))
-    if len(versions) > 0:
-      property_id = str(versions[0].propertyId)
+    if response.status_code == 200:
+      versions = list(PAPIPropertyVersion(**item) for item in response.json().get("versions", {}).get("items", []))
+      if len(versions) > 0:
+        property_id = str(versions[0].propertyId)
     return property_id
 
   def get_property(self, propertyName) -> PAPIProperty:
