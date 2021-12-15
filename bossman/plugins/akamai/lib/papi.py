@@ -11,6 +11,12 @@ _cache = cache.key(__name__)
 
 class PAPIError(BossmanError):
   pass
+class PAPIValidationError(PAPIError):
+  pass
+class PAPIRuleTreeValidationError(PAPIValidationError):
+  pass
+class PAPIHostnamesValidationError(PAPIValidationError):
+  pass
 class PAPIRuleFormatSchemaNotFoundError(BossmanError):
   pass
 class PAPIVersionAlreadyActiveError(PAPIError):
@@ -258,6 +264,8 @@ class PAPIClient:
     response = self.session.put(url, json=ruleTree, headers=headers)
     if response.status_code == 200:
       return PAPIPropertyVersionRuleTree(**response.json())
+    if response.status_code == 400:
+      raise PAPIRuleTreeValidationError(response.json())
     raise PAPIError(response.json())
 
   def update_property_hostnames(self, propertyId, version, hostnames):
@@ -266,6 +274,8 @@ class PAPIClient:
     response = self.session.put(url, json=hostnames)
     if response.status_code == 200:
       return PAPIPropertyVersionHostnames(**response.json())
+    if response.status_code == 400:
+      raise PAPIHostnamesValidationError(response.json())
     raise PAPIError(response.json())
 
   @lru_cache(maxsize=1000) # don't fetch more than once per session, even if the rule format wasn't persistently cacheable
