@@ -26,6 +26,7 @@ from bossman.plugins.akamai.lib.papi import (
   PAPIPropertyVersionRuleTree,
   PAPIBulkActivation,
   PAPIError,
+  PAPIValidationError,
   PAPIVersionAlreadyActiveError,
   PAPIVersionAlreadyActivatingError
 )
@@ -368,14 +369,20 @@ class ResourceType(ResourceTypeABC):
       notes.etag = rule_tree_result.etag
       notes.has_errors = notes.has_errors or rule_tree_result.has_errors
 
+      # Finally, assign the updated values to the git notes
+      revision.get_notes(resource.path).set(**vars(notes))
+
       return PropertyApplyResult(resource, revision, next_version, rule_tree=rule_tree_result, hostnames=hostnames_result)
-    except RuntimeError as e:
+    except PAPIValidationError as e:
+      # 400 errors from PAPI need to be recorded against the revision notes,
+      # there is no point in re-applying an invalid revision, and fixing will
+      # require a new revision.
       notes.has_errors = True
       revision.get_notes(resource.path).set(**vars(notes))
       return PropertyApplyResult(resource, revision, error=e)
-    finally:
-      # Finally, assign the updated values to the git notes
-      revision.get_notes(resource.path).set(**vars(notes))
+    except RuntimeError as e:
+      # Transient errors should not be recorded in the git notes so apply can be retried
+      return PropertyApplyResult(resource, revision, error=e)
 
 
   def get_property_version_for_revision_id(self, property_id, revision_id):
