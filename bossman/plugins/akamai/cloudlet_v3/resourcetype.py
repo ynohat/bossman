@@ -124,9 +124,10 @@ class ResourceType(ResourceTypeABC):
         policy_data = revision.show_path(resource.policy_path, textconv=True)
         if policy_data is None:
           raise PolicyVersionValidationError("missing policy version JSON")
-        policy_data: SharedPolicyAsCode = self.client.converter.structure(json.loads(policy_data), SharedPolicyAsCode)
+        policy_data = json.loads(policy_data)
         # before changing anything in API, check that the json files are valid
         validate_policy_version(policy_data)
+        policy_data: SharedPolicyAsCode = self.client.converter.structure(policy_data, SharedPolicyAsCode)
       except PolicyVersionValidationError as e:
         notes.has_errors = True
         raise e
@@ -157,8 +158,7 @@ class ResourceType(ResourceTypeABC):
   def validate_working_tree(self, resource: SharedPolicyResource):
     try:
       with open(resource.policy_path, "r") as fd:
-        policy_data = fd.read()
-        policy_data: SharedPolicyAsCode = self.client.converter.structure(json.loads(policy_data), SharedPolicyAsCode)
+        policy_data = json.loads(fd.read())
         validate_policy_version(policy_data)
     except (NotADirectoryError, FileNotFoundError) as e:
       raise PolicyVersionValidationError("file not found {}".format(e.filename))

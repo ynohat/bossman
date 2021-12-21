@@ -12,7 +12,7 @@ def get_schema(name):
   with open(path) as fd:
     return json.loads(fd.read())
 
-def validate_policy_version(data: SharedPolicyAsCode):
+def validate_policy_version(data: dict):
   try:
     schema = get_schema('update-policy-version.json')
     validator = jsonschema.validators.Draft4Validator(schema, resolver=jsonschema.validators.RefResolver(
@@ -21,7 +21,7 @@ def validate_policy_version(data: SharedPolicyAsCode):
     ))
     for f in ['match_rule-AS-1.0.json', 'match_rule-ER-1.0.json', 'match_rule-FR-1.0.json', 'match-rules.json']:
       validator.resolver.store['file://' + f] = get_schema(f)
-    validator.validate(dict(description="dummy description", matchRules=data.matchRules))
+    validator.validate(data)
   except json.decoder.JSONDecodeError as err:
     raise PolicyVersionValidationError("bad rules.json", err.args)
   except jsonschema.ValidationError as err:
