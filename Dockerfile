@@ -4,15 +4,13 @@
 
 FROM golang:alpine3.11 as akamai-cli
 
-RUN apk add --no-cache git upx \
+RUN apk add --no-cache git \
   && go get -d github.com/akamai/cli \
   && cd $GOPATH/src/github.com/akamai/cli \
   && go mod init \
   && go mod tidy \
   # -ldflags="-s -w" strips debug information from the executable 
   && go build -o /akamai -ldflags="-s -w" \
-  # upx creates a self-extracting compressed executable
-  && upx -3 -o/akamai.upx /akamai
 
 #####################
 # JSONNET BUILDER
@@ -26,13 +24,11 @@ RUN apk add --no-cache git upx \
 
 FROM golang:alpine3.11 as jsonnet
 
-RUN apk add --no-cache git upx \
+RUN apk add --no-cache git \
   && git clone https://github.com/google/go-jsonnet.git \
   && cd go-jsonnet \
   && go build -o /jsonnet -ldflags="-s -w" ./cmd/jsonnet \
-  && upx -3 -o/jsonnet.upx /jsonnet \
   && go build -o /jsonnetfmt -ldflags="-s -w" ./cmd/jsonnetfmt \
-  && upx -3 -o/jsonnetfmt.upx /jsonnetfmt \
   && chmod +x /jsonnet*
 
 #####################
@@ -41,9 +37,9 @@ RUN apk add --no-cache git upx \
 
 FROM python:3.8-alpine3.11
 
-COPY --from=akamai-cli /akamai.upx /bin/akamai
-COPY --from=jsonnet /jsonnet.upx /usr/bin/jsonnet
-COPY --from=jsonnet /jsonnetfmt.upx /usr/bin/jsonnetfmt
+COPY --from=akamai-cli /akamai /bin/akamai
+COPY --from=jsonnet /jsonnet /usr/bin/jsonnet
+COPY --from=jsonnet /jsonnetfmt /usr/bin/jsonnetfmt
 
 ADD . /bossman
 
