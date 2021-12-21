@@ -2,7 +2,7 @@ import re
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
-from typing import List, Optional
+from typing import List, Dict, Optional
 
 
 
@@ -85,7 +85,7 @@ class SharedPolicyVersion:
   modifiedBy: str
   modifiedDate: datetime
   description: str
-  matchRules: Optional[List[dict]] = None
+  matchRules: Optional[List[Dict]] = None
 
 @dataclass
 class GetPolicyVersionsResponse:
@@ -99,4 +99,4 @@ class SharedPolicyAsCode:
   description: str
   groupId: int
   cloudletType: SharedPolicyCloudletType
-  matchRules: Optional[List[dict]] = None
+  matchRules: Optional[List[Dict]] = None
