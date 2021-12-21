@@ -5,6 +5,15 @@
   "type": "object",
   "description": "Contains information about a policy version.",
   "properties": {
+    "cloudletType": {
+      "type": "string",
+      "enum": ["AS", "FR", "ER"],
+      "description": "Cloudlet two-letter code."
+    },
+    "groupId": {
+      "type": "integer",
+      "description": "Access Control Group Id."
+    },
     "description": {
       "type": "string",
       "description": "A human-readable label for the version."
@@ -15,6 +24,8 @@
     }
   },
   "required": [
+    "cloudletType",
+    "groupId",
     "description"
   ]
 }
