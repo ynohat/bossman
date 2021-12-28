@@ -85,8 +85,8 @@ validate and version freeze property versions when they are deployed.
 ``groupId`` and ``contractId`` are required so that Bossman has enough information
 to create new properties in the appropriate location.
 
-``bossman status [glob*]``
-________________________________
+``bossman status [-e|--exact-match] [glob*]``
+__________________________________________________________________________________________________
 
 The ``status`` command displays details about *interesting* property versions.
 
@@ -116,8 +116,8 @@ In the normal case, property versions are created by bossman and their status li
 
 See `Making changes in the UI`_ for more details about handling dirty versions.
 
-``bossman apply [--force] [--dry-run] [--since=commit] [glob*]``
-_____________________________________
+``bossman apply [--force] [--dry-run] [--since=commit] [-e|--exact-match] [glob*]``
+__________________________________________________________________________________________________
 
 The ``apply`` command creates a new version for every commit on the current branch.
 
@@ -155,8 +155,8 @@ The purpose is threefold.
   record this information in a legible way in the regular Author field;
 * It provides a mechanism for bossman to correlate property versions with git revisions
 
-``bossman (pre)release [--rev HEAD] [glob*]``
-_____________________________________________
+``bossman (pre)release [--rev HEAD] [-e|--exact-match] [glob*]``
+_______________________________________________________________________
 
 **prerelease** : activates the selected revision and resources to the staging network
 
