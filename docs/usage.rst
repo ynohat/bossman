@@ -51,15 +51,22 @@ operator to restrict the command to a subset of resources. For example, to get t
 
 .. code-block:: bash
 
-  bossman status dev*
-
+  bossman status dev
 
 It  can be provided multiple times, which will restrict operation to the subset of resources whose paths
 match any of the patterns.
 
-.. topic:: Path matching details
+.. topic:: Partial vs. exact path matching
 
-  It performs partial matching on resource paths using `Unix filename pattern matching <https://docs.python.org/3/library/fnmatch.html>`_.
+  By default, bossman performs partial matching, so the pattern need only match a part of the resource path.
+
+  In some cases, typically when the name of a resource is the prefix of another resource, it is not possible
+  to target only a specific resource with partial matching. For those cases, bossman supports an ``--exact-match``
+  flag which requires the glob pattern to match the entire resource path.
+
+.. topic:: Path matching syntax
+
+  Bossman glob patterns use `Unix filename pattern matching <https://docs.python.org/3/library/fnmatch.html>`_.
 
   .. csv-table:: Pattern modifiers
     :header: "Pattern", "Meaning"
@@ -68,6 +75,8 @@ match any of the patterns.
     ``?``, "Matches any single character (including /)"
     ``[seq]``, "Matches any character in _seq_"
     ``[!seq]``, "Matches any character _not_ in _seq_"
+
+.. topic:: Examples
 
   Assuming you have the following resources in your repository:
 
@@ -79,11 +88,34 @@ match any of the patterns.
   |  akamai/requestcontrol/dev3
   |  akamai/property/integration
   |  akamai/property/prod
+  |  akamai/property/prod-dark
+
+  By default (without adding the ``--exact-match`` flag)
 
   * ``akamai``, ``akam`` or ``akamai/*``: will select all the resources
   * ``property`` or ``akamai/property``: will select all Akamai properties
   * ``dev[1-2]`` will select all Akamai resources (properties and requestcontrol) for dev1 and dev2
   * ``dev[!3]`` will select all Akamai resources (properties and requestcontrol) for dev1 and dev2
+
+  Let's now imagine a case where an operation should be applied only to ``akamai/property/prod``.
+  Because the default is to search, we cannot easily target it without also targeting prod-china,
+  but we can use the ``--exact-match`` flag to clear the ambiguity. The following three examples
+  would select only prod and not prod-cn:
+
+  .. code-block:: bash
+
+    bossman apply --exact-match */prod
+    # -e is the short alias of --exact-match
+    bossman apply -e */property/prod
+    bossman apply -e akamai/property/prod
+
+  To complete the illustration, the following examples use ``--exact-match`` to select both:
+
+  .. code-block:: bash
+
+    bossman apply -e */prod*
+    bossman apply -e */property/prod*
+    bossman apply -e akamai/property/prod*
 
 .. topic:: Combining with shell expansion
 
@@ -109,13 +141,13 @@ This command must be run before anything can be done by Bossman. It adjusts the 
 file, adds a ``[bossman]`` section and extra refspecs to all remotess, to ensure
 that git notes are properly pushed and pulled along with commits.
 
-``bossman status [glob*]``
+``bossman status [-e|--exact-match] [glob*]``
 __________________________________________________________
 
 Provides synthetic information about the state of resources managed by bossman.
 
-``bossman apply [--force] [--dry-run] [--since=commit] [glob*]``
-__________________________________________________________
+``bossman apply [--force] [--dry-run] [--since=commit] [-e|--exact-match] [glob*]``
+___________________________________________________________________________________________
 
 Deploys all pending commits.
 
@@ -142,15 +174,15 @@ Deploy all the commits after ``integration`` was merged to the current branch::
 ``--force`` indicates that the plugin should apply a change even if it might be unsafe. The implementation
 and interpretation of "unsafe" is dependent on the plugin itself.
 
-``bossman validate [glob*]``
+``bossman validate [-e|--exact-match] [glob*]``
 __________________________________________________________
 
 Validates the correctness of resources in the working copy.
 
 This is the only command that does not operate on a commit.
 
-``bossman (pre)prerelease [--rev HEAD] [glob*]``
-__________________________________________________________
+``bossman (pre)prerelease [--rev HEAD] [-e|--exact-match] [glob*]``
+____________________________________________________________________
 
 * ``prerelease``: makes a given revision available to an internal audience,
   typically for testing
@@ -164,7 +196,7 @@ __________________________________________________________
 * ``HEAD``
 * a relative ref
 
-``bossman log [glob*]``
+``bossman log [-e|--exact-match] [glob*]``
 __________________________________________________________
 
 Outputs the revision history of the selected resources.
