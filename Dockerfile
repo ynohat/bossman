@@ -2,27 +2,24 @@
 # AKAMAI CLI BUILDER
 #########
 
-FROM golang:alpine3.11 as akamai-cli
+FROM golang:alpine3.14 AS akamai-cli
 
 RUN apk add --no-cache git \
-  && go get -d github.com/akamai/cli \
-  && cd $GOPATH/src/github.com/akamai/cli \
-  && go mod init \
+  && git clone --depth=1 https://github.com/akamai/cli \
+  && cd cli \
   && go mod tidy \
-  # -ldflags="-s -w" strips debug information from the executable 
-  && go build -o /akamai -ldflags="-s -w" \
+  # -ldflags="-s -w" strips debug information from the executable
+  && go build -o /akamai -ldflags="-s -w" cli/main.go
 
 #####################
 # JSONNET BUILDER
 #########
-
 # The jsonnet CLI depends on jsonnetfmt being available on the PATH
 # to prettyfy its output.
 # It also makes sense to include both jsonnet and jsonnetfmt in this
 # image since it is likely that the user will want to render the
 # templates, not just generate them.
-
-FROM golang:alpine3.11 as jsonnet
+FROM golang:alpine3.14 AS jsonnet
 
 RUN apk add --no-cache git \
   && git clone https://github.com/google/go-jsonnet.git \
@@ -35,7 +32,7 @@ RUN apk add --no-cache git \
 # FINAL
 #########
 
-FROM python:3.8-alpine3.11
+FROM python:3.8-alpine3.14
 
 COPY --from=akamai-cli /akamai /bin/akamai
 COPY --from=jsonnet /jsonnet /usr/bin/jsonnet
