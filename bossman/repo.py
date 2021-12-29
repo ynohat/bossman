@@ -263,7 +263,7 @@ class Revision:
 
   def __rich_console__(self, console, options):
     with self.repo._lock:
-      yield "[b]\[{}][/b] {} | {} {}".format(self.id, self.short_message, self.author_name, self.date)
+      yield "[b][{}][/b] {} | {} {}".format(self.id, self.short_message, self.author_name, self.date)
       # for change in self.changes.values():
       #   yield change
 
