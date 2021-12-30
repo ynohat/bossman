@@ -6,6 +6,8 @@ from bossman.repo import Revision
 from bossman.abc import ResourceABC
 from rich.console import Console
 
+from bossman.rich import bracketize
+
 console = Console()
 
 def init(subparsers: argparse._SubParsersAction):
@@ -30,7 +32,7 @@ class RevisionView:
     self.resources = resources
 
   def __rich_console__(self, console, options):
-    yield "\[{}] [yellow]{}[/] | [grey62]{}[/]".format(self.revision.id, self.revision.short_message, self.revision.author_name)
+    yield "{} [yellow]{}[/] | [grey62]{}[/]".format(bracketize(self.revision.id), self.revision.short_message, self.revision.author_name)
     for resource in self.resources:
       if set(resource.paths).intersection(self.revision.affected_paths):
         changes = self.revision.get_changes(resource.paths)

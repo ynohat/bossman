@@ -9,6 +9,8 @@ import gitdb.exc
 import yaml
 import threading
 
+from bossman.rich import bracketize
+
 def true(*args, **kwargs):
   return True
 
@@ -254,7 +256,7 @@ class Revision:
 
   def __str__(self):
     with self.repo._lock:
-      s = "[{}] {} {} | {}".format(self.id, self.short_message, self.author_name, self.date)
+      s = "{} {} {} | {}".format(bracketize(self.id), self.short_message, self.author_name, self.date)
       if len(self.changes):
         s += "\n\n  "
         s += "\n  ".join(str(change) for change in self.changes.values())
@@ -263,7 +265,7 @@ class Revision:
 
   def __rich_console__(self, console, options):
     with self.repo._lock:
-      yield "[bold][{}][/bold] {} | {} {}".format(self.id, self.short_message, self.author_name, self.date)
+      yield "[bold]{}[/bold] {} | {} {}".format(bracketize(self.id), self.short_message, self.author_name, self.date)
       # for change in self.changes.values():
       #   yield change
 

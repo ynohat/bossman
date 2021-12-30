@@ -7,6 +7,7 @@ from bossman.plugins.akamai.cloudlet_v3.resource import SharedPolicyResource
 from bossman.plugins.akamai.cloudlet_v3.data import Network, SharedPolicyActivationStatus, SharedPolicyVersion, SharedPolicyActivation
 from bossman.plugins.akamai.utils import GenericVersionComments
 from bossman.repo import Repo, Revision
+from bossman.rich import bracketize
 
 
 
@@ -80,7 +81,7 @@ class SharedPolicyVersionStatus:
       color = "dark_olive_green3"
       if len(missing_revs_since):
         color = "rosy_brown"
-      parts.append(r'[{}]\[{}][/]'.format(color, ref))
+      parts.append(r'[{}]{}[/]'.format(color, bracketize(ref)))
 
     if comments.commit:
       rev_branches = self.repo.get_branches_containing(comments.commit)
@@ -93,7 +94,7 @@ class SharedPolicyVersionStatus:
         for branch in rev_branches:
           branch_status(branch)
         for tag in self.repo.get_tags_pointing_at(comments.commit):
-          parts.append(r'[bright_cyan]\[{}][/]'.format(tag))
+          parts.append(r'[bright_cyan]{}[/]'.format(bracketize(tag)))
 
     if self.author:
       parts.append("[grey53]{}[/]".format(self.author.rsplit(" ", 1)[0]))
