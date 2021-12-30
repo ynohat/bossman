@@ -110,6 +110,11 @@ class Bossman:
     return get_resources(resources, list(globs), exact_match)
 
   @if_initialized
+  def is_applied(self, resource: ResourceABC, rev: Revision) -> bool:
+    resource_type = self.resource_manager.get_resource_type(resource.path)
+    return resource_type.is_applied(resource, rev)
+
+  @if_initialized
   def get_missing_revisions(self, resource: ResourceABC, since_rev: str = None) -> list:
     resource_type = self.resource_manager.get_resource_type(resource.path)
     revisions = self.get_revisions(resources=[resource], since_rev=since_rev)

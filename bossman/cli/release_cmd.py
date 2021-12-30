@@ -2,11 +2,13 @@ from functools import partial
 from concurrent.futures import ThreadPoolExecutor
 from os import getcwd
 import argparse
+
+from rich.padding import PaddingDimensions
 from bossman import Bossman
 from bossman.repo import Revision
 from bossman.abc import ResourceABC
 from rich.panel import Panel
-from rich.console import Console
+from rich.console import Console, RenderGroup
 from rich.progress import Progress, TextColumn, BarColumn
 from rich.table import Table
 from rich.columns import Columns
@@ -30,17 +32,30 @@ def init(subparsers: argparse._SubParsersAction):
   release_parser.set_defaults(func=exec, action="release")
 
 def exec(bossman: Bossman, yes, rev, glob, exact_match:bool, action, *args, **kwargs):
-  resources = bossman.get_resources(*glob, exact_match=exact_match)
+  resources = bossman.get_resources(*glob, rev=rev, exact_match=exact_match)
   revision = bossman.get_revision(rev, resources)
+  deployed, undeployed = [], []
+  # a (pre)release operation should only be possible on resources that have been deployed by
+  # a previous apply operation.
+  for resource in resources:
+    deployed.append(resource) if bossman.is_applied(resource, revision) else undeployed.append(resource)
 
   console.print("Preparing to {}:".format(action))
-  console.print(Panel(revision))
-  console.print(Columns(resources, expand=False, equal=True))
+  console.print(Panel(RenderGroup(
+    revision,
+    "\n",
+    Columns(deployed, expand=True, equal=True))
+  ))
+  if len(undeployed):
+    console.print("\nThe following resources were selected but {} was not applied to them:\n".format(revision.id))
+    console.print(Columns(undeployed, expand=True, equal=True))
+
+
   if not yes and not console.is_terminal:
     console.print("Input or output is not a terminal. Consider using --yes to forgo validation.")
     return
   if (not yes):
-    if Prompt.ask("Shall we proceed?", choices=("yes", "no"), default="no") != "yes":
+    if Prompt.ask("\nShall we proceed?", choices=("yes", "no"), default="no") != "yes":
       console.print("OK!")
       return
 
@@ -67,14 +82,14 @@ def exec(bossman: Bossman, yes, rev, glob, exact_match:bool, action, *args, **kw
 
     futures = []
     with ThreadPoolExecutor(100, "prereleasse") as executor:
-      for resource in resources:
+      for resource in deployed:
         description = str(resource)
         if hasattr(resource, "__rich__"):
           description = resource.__rich__()
         task_id = progress_ui.add_task(description, total=100, activation_status="-", start=False)
         _on_update = partial(on_update, task_id)
         futures.append(executor.submit(getattr(bossman, action), resource, revision, _on_update))
-      for resource, future in zip(resources, futures):
+      for resource, future in zip(deployed, futures):
         try:
           future.result()
         except Exception as e:
