@@ -148,17 +148,16 @@ class PropertyStatus(ResourceStatusABC):
           parts.append(r'[{}]{}[/{}]'.format(color, bracketize(ref), color))
 
         if comments.commit:
-          rev_branches = self.repo.get_branches_containing(comments.commit)
-          if len(rev_branches) == 0:
-            # If the comment referenced no commit, or if the commit was not found
-            # on any branch (which is possible if history was rewritten or the branch
-            # containing that commit was dropped without being merged), indicate question mark
-            parts.append(r':question:')
-          else:
-            for branch in rev_branches:
-              branch_status(branch)
-            for tag in self.repo.get_tags_pointing_at(comments.commit):
-              parts.append(r'[bright_cyan]{}[/bright_cyan]'.format(bracketize(tag)))
+          parts.append(r'[grey53]{}[/]'.format(bracketize(comments.commit)))
+          rev_branches = []
+          if self.repo.rev_is_reachable(comments.commit):
+            rev_branches.append(self.repo.get_current_branch())
+          rev_branches += self.repo.get_branches(points_at=comments.commit, all=True)
+          rev_branches = list(dict.fromkeys(rev_branches))
+          for branch in rev_branches:
+            branch_status(branch)
+          for tag in self.repo.get_tags_pointing_at(comments.commit):
+            parts.append(r'[bright_cyan]{}[/bright_cyan]'.format(bracketize(tag)))
 
         author = comments.author or version.updatedByUser
         if author:
@@ -190,7 +189,7 @@ class PropertyApplyResult(ResourceApplyResultABC):
     parts = []
     parts.append(r':arrow_up:')
     parts.append(self.resource.__rich__())
-    parts.append(r'[grey53][{h}][/]'.format(h=self.revision.id))
+    parts.append(r'[grey53]{h}[/]'.format(h=bracketize(self.revision.id)))
     if self.property_version:
       parts.append(r'[grey53]v{version}[/]'.format(version=self.property_version.propertyVersion))
     if self.revision.short_message:
@@ -246,7 +245,11 @@ class ResourceType(ResourceTypeABC):
         interesting_versions.add(prop.stagingVersion)
         interesting_versions.add(prop.productionVersion)
         interesting_versions.add(prop.latestVersion)
-        for branch in self.repo.get_branches():
+        interesting_branches = []
+        interesting_branches.append(self.repo.get_current_branch())
+        for branch in self.repo.get_branches(no_merged=True, all=True):
+          interesting_branches.append(branch)
+        for branch in interesting_branches:
           head = self.repo.get_revision(branch, resource.paths)
           notes = head.get_notes(resource.path)
           v = notes.get("property_version", None)

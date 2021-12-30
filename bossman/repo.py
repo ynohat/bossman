@@ -463,16 +463,16 @@ class Repo:
     return self._repo.head.ref.name
 
   @synchronized
-  def get_branches(self) -> list:
-    return tuple(branch.name for branch in self._repo.branches)
-
-  @synchronized
-  def get_branches_containing(self, rev: str) -> list:
+  def get_branches(self, **kwargs) -> list:
     try:
-      result = self._repo.git.branch(contains=rev, format="%(refname:short)")
+      result = self._repo.git.branch(format="%(refname:short)", **kwargs)
       return result.splitlines()
     except git.GitCommandError:
       return []
+
+  @synchronized
+  def get_branches_containing(self, rev: str, **kwargs) -> list:
+    return self.get_branches(contains=rev, **kwargs)
 
   @synchronized
   def get_revisions(self, since_rev: str = None, until_rev: str = "HEAD",  paths: list = None) -> list:

@@ -94,11 +94,10 @@ Interesting property versions are either:
 
 * activating, or pending activation on any network
 * the latest version
-* deployed versions of any HEAD commit of any active branch
+* a deployed version of the HEAD commit of the current branch (what you're currently working on)
+* deployed versions of any HEAD commit of any branch not merged into the current branch (other work in progress)
 
 In the normal case, property versions are created by bossman and their status line shows:
-
-.. figure:: property/normal_status.png
 
 * the property version
 * STG, PRD or STG,PRD depending on the activation status (if they are pending activation
@@ -111,8 +110,17 @@ In the normal case, property versions are created by bossman and their status li
 
 * the first line of the property version notes, truncated to 40 characters
 * a series of git refs to the corresponding commit, coloured green if the version corresponds
-  to the latest commit on that branch, or brown if it is behind
+  to the latest commit on that branch, or brown if it is behind; the refs shown are:
+
+  * the shortened git commit id
+  * a relative ref to from the current branch (e.g. `main~3`) if the commit is reachable (merged)
+  * a ref to every branch (merged or not) whose HEAD points at the commit
+
 * a series of tags pointing at the corresponding commit, coloured blue
+
+To illustrate:
+
+.. figure:: property/normal_status.png
 
 See `Making changes in the UI`_ for more details about handling dirty versions.
 

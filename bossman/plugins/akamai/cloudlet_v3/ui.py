@@ -84,17 +84,16 @@ class SharedPolicyVersionStatus:
       parts.append(r'[{}]{}[/]'.format(color, bracketize(ref)))
 
     if comments.commit:
-      rev_branches = self.repo.get_branches_containing(comments.commit)
-      if len(rev_branches) == 0:
-        # If the comment referenced no commit, or if the commit was not found
-        # on any branch (which is possible if history was rewritten or the branch
-        # containing that commit was dropped without being merged), indicate question mark
-        parts.append(r':question:')
-      else:
-        for branch in rev_branches:
-          branch_status(branch)
-        for tag in self.repo.get_tags_pointing_at(comments.commit):
-          parts.append(r'[bright_cyan]{}[/]'.format(bracketize(tag)))
+      parts.append(r'[grey53]{}[/]'.format(bracketize(comments.commit)))
+      rev_branches = []
+      if self.repo.rev_is_reachable(comments.commit):
+        rev_branches.append(self.repo.get_current_branch())
+      rev_branches += self.repo.get_branches(points_at=comments.commit, all=True)
+      rev_branches = list(dict.fromkeys(rev_branches))
+      for branch in rev_branches:
+        branch_status(branch)
+      for tag in self.repo.get_tags_pointing_at(comments.commit):
+        parts.append(r'[bright_cyan]{}[/bright_cyan]'.format(bracketize(tag)))
 
     if self.author:
       parts.append("[grey53]{}[/]".format(self.author.rsplit(" ", 1)[0]))
