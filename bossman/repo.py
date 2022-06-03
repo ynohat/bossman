@@ -421,7 +421,8 @@ class Repo:
     """
     try:
       rev = self.rev_parse(rev) if rev is not None else "HEAD"
-      commit = next(self._repo.iter_commits(rev, paths=paths))
+      # see also the comment in self.get_revisions
+      commit = next(self._repo.iter_commits(rev, paths=paths, first_parent=True))
       prev = git.NULL_TREE
       if commit.parents:
         prev = commit.parents[0]
