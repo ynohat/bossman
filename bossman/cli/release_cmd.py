@@ -37,6 +37,7 @@ def exec(bossman: Bossman, yes, rev, glob, exact_match:bool, action, *args, **kw
   deployed, undeployed = [], []
   # a (pre)release operation should only be possible on resources that have been deployed by
   # a previous apply operation.
+  bossman.repo.fetch_notes('*')
   for resource in resources:
     deployed.append(resource) if bossman.is_applied(resource, revision) else undeployed.append(resource)
 
