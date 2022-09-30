@@ -36,7 +36,11 @@ class Session(requests.Session):
       super(Session, self).__init__(**kwargs)
       self.edgerc = EdgeRc(edgerc)
       self.section = section
-      self.switch_key = switch_key
+      self.switch_key = None
+      if self.edgerc.has_option(section, "account_key"):
+        self.switch_key = self.edgerc.get(section, "account_key")
+      if switch_key != None:
+        self.switch_key = switch_key
       self.auth = EdgeGridAuth(
         client_token=self.edgerc.get(section, "client_token"),
         client_secret=self.edgerc.get(section, "client_secret"),

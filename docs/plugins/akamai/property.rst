@@ -16,9 +16,9 @@ ________________________________
       pattern: akamai/property/{name}
       options:
         edgerc: ~/.edgerc
-        section: papi
+        section: default
         #env_prefix: ""
-        #switch_key: xyz
+        #account_key: xyz
 
 The above are the default values, applied even if the ``.bossman`` configuration file is
 not present. You only need to configure if you need to depart from the defaults.
@@ -58,6 +58,19 @@ specify ``env_prefix`` in the configuration file. For example, if you have this 
 You can specify a different section (or even a different config file or switch key) like this::
 
   PROD_EDGERC_SECTION=prod PREPROD_EDGERC_SECTION=preprod bossman status
+
+The switch key can also be specified as part of an ``.edgerc`` section:
+
+.. code-block:: ini
+
+  [example]
+  client_token = xxxx
+  client_secret = xxxx
+  auth_token = xxxxx
+  host = xxxx
+  account_key = B-C-1ED34DK:1-8BYUX
+
+The order of precedence for the switch key is environment, ``.bossman`` config file, and finally ``.edgerc``.
 
 Resource Structure
 ________________________________

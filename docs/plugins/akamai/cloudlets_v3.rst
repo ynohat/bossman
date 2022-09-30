@@ -23,7 +23,7 @@ ________________________________
         edgerc: ~/.edgerc
         section: default
         #env_prefix: ""
-        #switch_key: xyz
+        #account_key: xyz
 
 The above are the default values, applied even if the ``.bossman`` configuration file is
 not present. You only need to configure if you need to depart from the defaults.

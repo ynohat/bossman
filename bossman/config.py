@@ -17,7 +17,7 @@ _DEFAULT_RESOURCE_TYPES = (
     "pattern": "akamai/property/{name}",
     "options": {
       "edgerc": getenv("AKAMAI_EDGERC", expanduser("~/.edgerc")),
-      "section": getenv("AKAMAI_EDGERC_SECTION", "papi"),
+      "section": getenv("AKAMAI_EDGERC_SECTION", "default"),
       "switch_key": getenv("AKAMAI_EDGERC_SWITCHKEY", None),
     }
   },

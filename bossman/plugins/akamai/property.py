@@ -31,6 +31,7 @@ from bossman.plugins.akamai.lib.papi import (
   PAPIVersionAlreadyActivatingError
 )
 from bossman.rich import bracketize
+from rich import print
 
 RE_COMMIT = re.compile("^commit: ([a-z0-9]*)", re.MULTILINE)
 
@@ -222,8 +223,11 @@ class ResourceTypeOptions:
     from os import environ
     self.env_prefix = options.get("env_prefix", "")
     self.edgerc = expanduser(environ.get("%sEDGERC" % self.env_prefix, options.get("edgerc", "~/.edgerc")))
-    self.section = environ.get("%sEDGERC_SECTION" % self.env_prefix, options.get("section", "papi"))
-    self.switch_key = environ.get("%sEDGERC_SWITCH_KEY" % self.env_prefix, options.get("switch_key", None))
+    self.section = environ.get("%sEDGERC_SECTION" % self.env_prefix, options.get("section", "default"))
+    switch_key_opt = options.get("account_key", options.get("switch_key", None))
+    if "switch_key" in options:
+      print('[red]WARNING: "switch_key" option is deprecated; use "account_key" instead[/]')
+    self.switch_key = environ.get("%sEDGERC_SWITCH_KEY" % self.env_prefix, switch_key_opt)
 
 class ResourceType(ResourceTypeABC):
   def __init__(self, repo: Repo, config):
