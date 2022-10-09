@@ -8,4 +8,5 @@ Plugins
    :caption: Contents:
 
    plugins/akamai/property
+   plugins/akamai/edgehostname
    plugins/akamai/cloudlets_v3
