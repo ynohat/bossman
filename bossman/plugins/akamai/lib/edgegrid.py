@@ -4,6 +4,7 @@ from requests.adapters import HTTPAdapter, RetryError
 from urllib3.util.retry import Retry, MaxRetryError
 from akamai.edgegrid import EdgeGridAuth, EdgeRc
 from configparser import NoSectionError, NoOptionError
+from bossman import logging
 from bossman.logging import logger
 from bossman.errors import BossmanError
 
@@ -30,7 +31,7 @@ adapter = HTTPAdapter(
   )
 )
 
-class Session(requests.Session):
+class Session(logging.RequestsLoggingSession):
   def __init__(self, edgerc, section, switch_key=None, **kwargs):
     try:
       super(Session, self).__init__(**kwargs)

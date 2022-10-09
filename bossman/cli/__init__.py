@@ -69,8 +69,8 @@ class SetVerbosity(argparse.Action):
     super(SetVerbosity, self).__init__(*args, **kwargs)
 
   def __call__(self, parser, namespace, values, option_string=None):
-    import logging
-    logging.basicConfig(level=values)
+    from bossman.logging import logger
+    logger.setLevel(values)
     logger.info("SetVerbosity verbosity={verbosity}".format(verbosity=values))
 
 if __name__ == '__main__':
