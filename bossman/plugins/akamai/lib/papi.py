@@ -23,6 +23,20 @@ class PAPIVersionAlreadyActiveError(PAPIError):
   pass
 class PAPIVersionAlreadyActivatingError(PAPIError):
   pass
+class PAPIEdgeHostnameNotAvailableError(PAPIError):
+  pass
+class PAPIEdgeHostnameChangeAlreadyInProgressError(PAPIError):
+  pass
+
+class PAPIEdgeHostname:
+  def __init__(self, **kwargs):
+    self.edgeHostnameId = kwargs.get("edgeHostnameId")
+    self.domainPrefix = kwargs.get("domainPrefix")
+    self.status = kwargs.get("status")
+    self.ipVersionBehavior = kwargs.get("ipVersionBehavior")
+    self.secure = kwargs.get("secure")
+    self.edgeHostnameDomain = kwargs.get("edgeHostnameDomain")
+    self.status = kwargs.get("status", None)
 
 class PAPIProperty:
   def __init__(self, **kwargs):
@@ -156,6 +170,49 @@ class PAPIClient:
   def __init__(self, edgerc, section, switch_key=None, **kwargs):
     self.logger = get_class_logger(self)
     self.session = Session(edgerc, section, switch_key=switch_key, **kwargs)
+
+  def get_edgehostnames(self, contractId, groupId):
+    self.logger.debug(f'get_edgehostnames contractId=${contractId} groupId=${groupId}')
+    response = self.session.get("/papi/v1/edgehostnames", params=dict(contractId=contractId, groupId=groupId))
+    edgeHostnames = []
+    if response.status_code == 200:
+      edgeHostnames = list(PAPIEdgeHostname(**item) for item in response.json().get("edgeHostnames", {}).get("items", []))
+    return edgeHostnames
+
+  def create_edgehostname(self, contractId, groupId, domainPrefix, domainSuffix, productId, ipVersionBehavior, secureNetwork, certEnrollmentId=None):
+    self.logger.debug(f'create_edgehostnames {domainPrefix}.{domainSuffix} contractId=${contractId} groupId=${groupId}')
+    params=dict(contractId=contractId, groupId=groupId)
+    body=dict(
+      domainPrefix=domainPrefix,
+      domainSuffix=domainSuffix,
+      productId=productId,
+      ipVersionBehavior=ipVersionBehavior,
+      secureNetwork=secureNetwork,
+    )
+    if certEnrollmentId != None:
+      body['certEnrollmentId'] = certEnrollmentId
+    response = self.session.post("/papi/v1/edgehostnames", params=params, json=body)
+    if response.status_code == 201:
+      response = self.session.get(response.headers["Location"])
+      if response.status_code == 200:
+        edgeHostnames = list(PAPIEdgeHostname(**item) for item in response.json().get("edgeHostnames", {}).get("items", []))
+        return edgeHostnames[0]
+    if response.status_code == 400:
+      if 'not-available' in response.json().get('type'):
+        raise PAPIEdgeHostnameNotAvailableError(body)
+      if 'pending change request' in response.json().get('detail'):
+        raise PAPIEdgeHostnameChangeAlreadyInProgressError(body)
+    raise PAPIError(response.json())
+
+  def get_edgehostname_id(self, contractId, groupId, domainPrefix, domainSuffix):
+    edgeHostnames = self.get_edgehostnames(contractId, groupId)
+    filtered = (
+      edgeHostname
+      for edgeHostname in edgeHostnames
+      if edgeHostname.domainPrefix == domainPrefix
+      and edgeHostname.domainSuffix == domainSuffix
+    )
+    return filtered[0] if len(filtered) else None
 
   def get_property_id(self, propertyName):
     self.logger.debug("get_property_id propertyName={propertyName}".format(propertyName=propertyName))

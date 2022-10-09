@@ -18,7 +18,7 @@ _DEFAULT_RESOURCE_TYPES = (
     "options": {
       "edgerc": getenv("AKAMAI_EDGERC", expanduser("~/.edgerc")),
       "section": getenv("AKAMAI_EDGERC_SECTION", "default"),
-      "switch_key": getenv("AKAMAI_EDGERC_SWITCHKEY", None),
+      "account_key": getenv("AKAMAI_EDGERC_SWITCHKEY", None),
     }
   },
   {
@@ -27,9 +27,18 @@ _DEFAULT_RESOURCE_TYPES = (
     "options": {
       "edgerc": getenv("AKAMAI_EDGERC", expanduser("~/.edgerc")),
       "section": getenv("AKAMAI_EDGERC_SECTION", "default"),
-      "switch_key": getenv("AKAMAI_EDGERC_SWITCHKEY", None),
+      "account_key": getenv("AKAMAI_EDGERC_SWITCHKEY", None),
     }
   },
+  {
+    "module": "bossman.plugins.akamai.edgehostname",
+    "pattern": "akamai/edgehostname/{name}.json",
+    "options": {
+      "edgerc": getenv("AKAMAI_EDGERC", expanduser("~/.edgerc")),
+      "section": getenv("AKAMAI_EDGERC_SECTION", "default"),
+      "account_key": getenv("AKAMAI_EDGERC_SWITCHKEY", None),
+    }
+  }
 )
 
 class PathPatternMatch:

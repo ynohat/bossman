@@ -317,12 +317,12 @@ class Repo:
         try:
           self._repo.git.fetch(remote, "+{}:{}".format(ref, ref))
         except git.GitCommandError as e:
-          if "refspec" in e.stderr:
+          if "refspec" in e.stderr.lower():
             # if we don't have notes in this namespace we might get
             # an invalid refspec or a "refspec xyz does not match any"
             #print("Warning: invalid refspec error occurred when running `{}`".format(e._cmdline), file=sys.stderr)
             pass
-          elif "couldn't find remote ref" in e.stderr:
+          elif "couldn't find remote ref" in e.stderr.lower():
             # if the remote doesn't know about this ref yet, this can happen; it is fine
             pass
           elif "authentication failures" in e.stderr:
