@@ -16,8 +16,7 @@ class GenericVersionComments:
     comments.write("author: {} <{}>\n".format(revision.author_name, revision.author_email))
     if revision.author_email != revision.committer_email:
       comments.write("committer: {} <{}>\n".format(revision.commit.committer.name, revision.commit.committer.email))
-    else:
-      return GenericVersionComments(comments.getvalue(), truncate_to)
+    return GenericVersionComments(comments.getvalue(), truncate_to)
 
   def __init__(self, comments: str, truncate_to: int = None):
     self.truncate_to = truncate_to
