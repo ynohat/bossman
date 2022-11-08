@@ -28,7 +28,7 @@ class GenericVersionComments:
 
   def __str__(self) -> str:
     if self.truncate_to:
-      if len(self.message) + len(" ".join(self.metadata.keys() + self.metadata.values())) > self.truncate_to:
+      if len(self.message) + len(" ".join(self.metadata.keys())) + len(" ".join(self.metadata.values())) > self.truncate_to:
         # if the total length of the keys and values in the metadata dictionary is greater
         # than the truncate_to limit, we'll shorten the description field by removing 
         # the 'branch' information from metadata
