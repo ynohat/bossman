@@ -361,6 +361,7 @@ class Repo:
       hexsha = self._repo.git.rev_parse(rev)
       return self._repo.rev_parse(hexsha)
     except (git.GitCommandError, gitdb.exc.BadName):
+      self.logger.exception("failed to resolve revision {}".format(rev))
       raise RepoRevNotFoundError("failed to resolve revision {}, please make sure it is a valid commit/tag name".format(rev))
 
   @synchronized
