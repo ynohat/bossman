@@ -56,7 +56,7 @@ class GenericVersionComments:
           yield _format(msg, metadata)
 
     for s in _shorten(self.message, deepcopy(self.metadata)):
-      if len(s) <= self.truncate_to:
+      if self.truncate_to == None or len(s) <= self.truncate_to:
         return s
 
     # we should NEVER see this
