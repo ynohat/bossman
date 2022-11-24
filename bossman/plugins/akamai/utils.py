@@ -1,8 +1,10 @@
 
 from collections import OrderedDict
 from io import StringIO
+from copy import deepcopy
 import re
 from bossman.repo import Revision
+from bossman.errors import BossmanError
 
 
 class GenericVersionComments:
@@ -26,27 +28,39 @@ class GenericVersionComments:
       if len(parts) == 2
       else {})
 
-  def __str__(self) -> str:
-    if self.truncate_to:
-      if len(self.message) + len(" ".join(self.metadata.keys())) + len(" ".join(self.metadata.values())) > self.truncate_to:
-        # if the total length of the keys and values in the metadata dictionary is greater
-        # than the truncate_to limit, we'll shorten the description field by removing 
-        # the 'branch' information from metadata
-        self.metadata.move_to_end("branch")
-        self.metadata.popitem()
-    out = "{}\n\n{}".format(
-      self.message,
-      "\n".join(
-        "{}: {}".format(k, v)
-        for k, v in self.metadata.items()
+  def __str__(self):
+    def _format(msg, metadata):
+      return "{}\n\n{}".format(
+        msg,
+        "\n".join(
+          "{}: {}".format(k, v)
+          for k, v in metadata.items()
+        )
       )
-    )
-    if self.truncate_to:
-      # this explicitly truncates the string to the set limit to avoid triggering the API 
-      # validation errors at the cost of potentially losing some information in the description field
-      return out[:self.truncate_to]
-    else:
-      return out
+
+    def _shorten(msg: str, metadata):
+      """
+      Yield successively shorter versions of the message.
+      """
+      # try the full message first
+      yield _format(msg, metadata)
+
+      # if too long, try truncating the commit message GitHub style
+      msg = msg.split('\n', 1)[0][:80]
+      yield _format(msg, metadata)
+
+      # if too long, remove non-essential metadata
+      for key in sorted(metadata.keys()):
+        if key != 'commit':
+          metadata.pop(key)
+          yield _format(msg, metadata)
+
+    for s in _shorten(self.message, deepcopy(self.metadata)):
+      if len(s) <= self.truncate_to:
+        return s
+
+    # we should NEVER see this
+    raise BossmanError('Failed to truncate the description field to required length', message=s, truncate_to=self.truncate_to)
 
   @property
   def commit(self):
