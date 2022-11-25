@@ -60,7 +60,7 @@ class GenericVersionComments:
         return s
 
     # we should NEVER see this
-    raise BossmanError('Failed to truncate the description field to required length', message=s, truncate_to=self.truncate_to)
+    raise BossmanError("Failed to truncate the description message to the required length {}".format(self.truncate_to))
 
   @property
   def commit(self):
