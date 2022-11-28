@@ -141,7 +141,8 @@ class ResourceType(ResourceTypeABC):
 
       policy_version = self.client.create_policy_version(
         policy.id,
-        str(GenericVersionComments.from_revision(revision)),
+        # we have to limit the length of the description field to 255 characters due to limitations of the Cloudlets V3 API
+        str(GenericVersionComments.from_revision(revision, 255)),
         policy_data.matchRules
       )
 
