@@ -50,7 +50,10 @@ USER bossman
 
 ENV AKAMAI_CLI_HOME=/home/bossman/
 ENV AKAMAI_CLI_CACHE_PATH=${AKAMAI_CLI_HOME}/.akamai-cli/cache
-RUN mkdir -p $AKAMAI_CLI_HOME/.akamai-cli ${AKAMAI_CLI_CACHE_PATH}
+RUN mkdir -p $AKAMAI_CLI_HOME/.akamai-cli ${AKAMAI_CLI_CACHE_PATH} \
+  # Ownership will differ on /work between host and container, this throws off
+  # more recent versions of git
+  && git config --global --add safe.directory /work
 
 RUN akamai install https://github.com/akamai-contrib/cli-jsonnet.git
 
