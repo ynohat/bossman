@@ -17,7 +17,7 @@ Bossman requires Python >=3.8 and git >=2.3.10.
    **It is highly recommended to use either the Windows Subsystem for Linux or Docker
    when running bossman on windows**.
 
-   The Windows Subsystem for Windows will provide a much smoother than native, but
+   The Windows Subsystem for Linux will provide a much smoother than native, but
    do pay close attention to the warnings on the console.
 
    In both cases (native or WSL), it is strongly recommended to install the `Windows
