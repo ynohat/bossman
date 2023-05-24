@@ -15,6 +15,9 @@ def init(subparsers: argparse._SubParsersAction):
 
 def exec(bossman: Bossman, glob, exact_match:bool, *args, **kwargs):
   resources = bossman.get_resources_from_working_copy(*glob, exact_match=exact_match)
+  if len(resources) == 0:
+    print('no resources selected')
+    return
   if len(resources):
     table = Table()
     table.add_column("Resource")

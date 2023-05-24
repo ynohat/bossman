@@ -19,6 +19,9 @@ def init(subparsers: argparse._SubParsersAction):
 def exec(bossman: Bossman, glob, exact_match:bool, *args, **kwargs):
   bossman.repo.fetch_notes("*")
   resources = bossman.get_resources(*glob, exact_match=exact_match)
+  if len(resources) == 0:
+    print('no resources selected')
+    return
   revisions = bossman.get_revisions(resources=resources)
   for revision in revisions:
     view = RevisionView(bossman, revision, resources)

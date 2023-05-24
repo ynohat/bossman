@@ -24,6 +24,9 @@ def init(subparsers: argparse._SubParsersAction):
 
 def exec(bossman: Bossman, glob, exact_match:bool, force:bool, dry_run:bool, since, **kwargs):
   resources = bossman.get_resources(*glob, exact_match=exact_match)
+  if len(resources) == 0:
+    print('no resources selected')
+    return
   futures = []
   had_errors = False
   with ThreadPoolExecutor(10, "apply") as executor:

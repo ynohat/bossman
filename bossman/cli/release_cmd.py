@@ -33,6 +33,9 @@ def init(subparsers: argparse._SubParsersAction):
 
 def exec(bossman: Bossman, yes, rev, glob, exact_match:bool, action, *args, **kwargs):
   resources = bossman.get_resources(*glob, rev=rev, exact_match=exact_match)
+  if len(resources) == 0:
+    print('no resources selected')
+    return
   revision = bossman.get_revision(rev, resources)
   deployed, undeployed = [], []
   # a (pre)release operation should only be possible on resources that have been deployed by

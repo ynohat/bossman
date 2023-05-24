@@ -14,6 +14,9 @@ def init(subparsers: argparse._SubParsersAction):
 
 def exec(bossman: Bossman, glob, exact_match:bool, *args, **kwargs):
   resources = bossman.get_resources(*glob, exact_match=exact_match)
+  if len(resources) == 0:
+    print('no resources selected')
+    return
   if len(resources):
     print("On branch", bossman.get_current_branch())
 
