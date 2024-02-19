@@ -5,7 +5,7 @@ from requests.adapters import HTTPAdapter, RetryError
 from urllib3.util.retry import Retry, MaxRetryError
 from akamai.edgegrid import EdgeGridAuth, EdgeRc
 from configparser import NoSectionError, NoOptionError
-from bossman import logging
+from bossman import logging, USER_AGENT
 from bossman.logging import logger
 from bossman.errors import BossmanError
 
@@ -64,11 +64,15 @@ class Session(logging.RequestsLoggingSession):
         return problem_details.get('detail') == 'Invalid timestamp'
     return False
 
-  def request(self, method, url, params=None, **kwargs):
+  def request(self, method, url, params=None, headers=None, **kwargs):
     try:
       if self.switch_key:
         params = params if params else {}
         params.update(accountSwitchKey=self.switch_key)
+
+      headers = headers if headers else {}
+      headers['user-agent'] = USER_AGENT
+
       baseUrl = "https://{host}".format(host=self.edgerc.get(self.section, "host"))
       url = parse.urljoin(baseUrl, url)
       # This retry loop is in addition to the retry loop implemented using the urllib Retry
@@ -79,7 +83,7 @@ class Session(logging.RequestsLoggingSession):
       tries = INVALID_TIMESTAMP_RETRIES
       while True:
         tries -= 1
-        response = super(Session, self).request(method, url, params=params, **kwargs)
+        response = super(Session, self).request(method, url, params=params, headers=headers, **kwargs)
         if response.status_code in (401, 403, *range(500, 600)):
           raise EdgegridError(response.json())
         elif self.is_invalid_timestamp_error(response):

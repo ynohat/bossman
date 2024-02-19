@@ -1,3 +1,4 @@
+import platform
 from os.path import abspath, commonpath, join
 from fnmatch import fnmatch
 from functools import cached_property
@@ -14,6 +15,9 @@ from bossman.config import Config, ResourceTypeConfig
 from bossman.logging import get_class_logger
 from bossman.repo import Repo, Revision, Change
 
+import pkg_resources
+DISTRIBUTION = pkg_resources.require("bossman")[0]
+USER_AGENT = f'{DISTRIBUTION.project_name.capitalize()}/{DISTRIBUTION.version} (Python/{platform.python_version()}; {platform.system()}/{platform.release()}; +https://github.com/ynohat/bossman)'
 
 def if_initialized(func):
   def wrapper(bossman, *args, **kwargs):
