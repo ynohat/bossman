@@ -1,3 +1,4 @@
+import random
 import sys, os
 import time
 import requests
@@ -21,17 +22,9 @@ else:
 class EdgegridError(BossmanError):
   pass
 
-INVALID_TIMESTAMP_RETRIES, INVALID_TIMESTAMP_SLEEP = 2, 10
-
 adapter = HTTPAdapter(
   pool_connections=1,
   pool_maxsize=10,
-  max_retries=Retry(
-    total=3,
-    backoff_factor=5,
-    status_forcelist=[429, 500, 502, 503, 504],
-    method_whitelist=["HEAD", "GET", "PUT", "DELETE", "OPTIONS", "TRACE"],
-  ),
 )
 
 class Session(logging.RequestsLoggingSession):
@@ -57,40 +50,38 @@ class Session(logging.RequestsLoggingSession):
     except NoOptionError as e:
       raise EdgegridError(e.message)
 
-  def is_invalid_timestamp_error(self, response: requests.Response):
+  def is_retryable(self, method: str, response: requests.Response):
+    if not method in ("HEAD", "GET", "PUT", "DELETE", "OPTIONS", "TRACE"):
+      return False
     if 'application/problem+json' in response.headers.get('Content-Type', ''):
       if response.status_code == 400:
         problem_details = response.json()
         return problem_details.get('detail') == 'Invalid timestamp'
-    return False
+    return response.status_code in (429, 500, 502, 503, 504)
 
   def request(self, method, url, params=None, headers=None, **kwargs):
-    try:
-      if self.switch_key:
-        params = params if params else {}
-        params.update(accountSwitchKey=self.switch_key)
+    if self.switch_key:
+      params = params if params else {}
+      params.update(accountSwitchKey=self.switch_key)
 
-      headers = headers if headers else {}
-      headers['user-agent'] = USER_AGENT
+    headers = headers if headers else {}
+    headers['user-agent'] = USER_AGENT
 
-      baseUrl = "https://{host}".format(host=self.edgerc.get(self.section, "host"))
-      url = parse.urljoin(baseUrl, url)
-      # This retry loop is in addition to the retry loop implemented using the urllib Retry
-      # mechanism. As a consequence, if we get a combination of "normal", network-level or
-      # semantic retryable errors and invalid timestamp errors, we might actually retry
-      # more times than expected. The alternative is to write all the retry logic ourselves
-      # which feels overkill.
-      tries = INVALID_TIMESTAMP_RETRIES
-      while True:
-        tries -= 1
-        response = super(Session, self).request(method, url, params=params, headers=headers, **kwargs)
-        if response.status_code in (401, 403, *range(500, 600)):
+    baseUrl = "https://{host}".format(host=self.edgerc.get(self.section, "host"))
+    url = parse.urljoin(baseUrl, url)
+    # We cannot use the standard urllib3 retry mechansim because it simply retries the requests as-is,
+    # with the same authorization headers. With edgegrid the auth headers may be invalid before we have
+    # finished retrying, yielding "Invalid Timestamp" 400 errors.
+    # https://github.com/psf/requests/issues/5975
+    tries, max_tries, wait = 1, 5, 1
+    while tries <= max_tries:
+      response = super(Session, self).request(method, url, params=params, headers=headers, **kwargs)
+      if not response.ok:
+        if self.is_retryable(method, response):
+          time.sleep(wait)
+          wait = wait * 2 ** tries + random.uniform(0, 1)
+        else:
           raise EdgegridError(response.json())
-        elif self.is_invalid_timestamp_error(response):
-          if tries > 0:
-            time.sleep(INVALID_TIMESTAMP_SLEEP)
-            continue
-          raise EdgegridError(response.json())
+      else:
         return response
-    except RetryError as e:
-      raise EdgegridError(str(e))
+    raise EdgegridError('max retries exceeded')
