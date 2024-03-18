@@ -34,6 +34,8 @@ class SharedPolicyCloudletType(Enum):
   ER = 'ER'
   FR = 'FR'
   AS = 'AS'
+  CD = 'CD'
+  IG = 'IG'
 
 @dataclass
 class SharedPolicyActivation:
