@@ -319,8 +319,9 @@ class ResourceType(ResourceTypeABC):
 
       # before changing anything in PAPI, check that the json files are valid
       rules_json = self.validate_rules(resource, rules)
-      # Update the rule tree with metadata from the revision commit.
-      comments = GenericVersionComments.from_revision(revision)
+      # Update the rule tree with metadata from the revision commit. PAPI supports less than
+      # 1000 characters here.
+      comments = GenericVersionComments.from_revision(revision, truncate_to=999)
       rules_json.update(comments=str(comments))
 
       hostnames_json = None
