@@ -80,6 +80,9 @@ class Session(logging.RequestsLoggingSession):
         if self.is_retryable(method, response):
           time.sleep(wait)
           wait = wait * 2 ** tries + random.uniform(0, 1)
+        elif int(response.status_code) // 100 == 4:
+          # input errors should be handled by the caller
+          return response
         else:
           raise EdgegridError(response.json())
       else:
