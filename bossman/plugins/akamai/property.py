@@ -171,12 +171,14 @@ class PropertyApplyResult(ResourceApplyResultABC):
   def __init__(self,
               resource: PropertyResource,
               revision: Revision,
+              previous_version: PAPIPropertyVersion=None,
               property_version: PAPIPropertyVersion=None,
               rule_tree: PAPIPropertyVersionRuleTree=None,
               hostnames: PAPIPropertyVersionHostnames=None,
               error=None):
     self.resource = resource
     self.revision = revision
+    self.previous_version = previous_version
     self.property_version = property_version
     self.rule_tree = rule_tree
     self.hostnames = hostnames
@@ -191,7 +193,12 @@ class PropertyApplyResult(ResourceApplyResultABC):
     parts.append(r':arrow_up:')
     parts.append(self.resource.__rich__())
     parts.append(r'[grey53]{h}[/]'.format(h=bracketize(self.revision.id)))
-    if self.property_version:
+    if self.previous_version:
+      parts.append(r'[grey53]v{previous_version} :arrow_right: v{version}[/]'.format(
+        previous_version=self.previous_version.propertyVersion,
+        version=self.property_version.propertyVersion,
+      ))
+    elif self.property_version:
       parts.append(r'[grey53]v{version}[/]'.format(version=self.property_version.propertyVersion))
     if self.revision.short_message:
       parts.append(r'[bright_white]"{subject_line}"[/]'.format(subject_line=self.revision.short_message))
@@ -381,7 +388,7 @@ class ResourceType(ResourceTypeABC):
       # Finally, assign the updated values to the git notes
       revision.get_notes(resource.path).set(**vars(notes))
 
-      return PropertyApplyResult(resource, revision, next_version, rule_tree=rule_tree_result, hostnames=hostnames_result)
+      return PropertyApplyResult(resource, revision, latest_version, next_version, rule_tree=rule_tree_result, hostnames=hostnames_result)
     except PAPIValidationError as e:
       # 400 errors from PAPI need to be recorded against the revision notes,
       # there is no point in re-applying an invalid revision, and fixing will
