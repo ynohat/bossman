@@ -15,9 +15,9 @@ from bossman.config import Config, ResourceTypeConfig
 from bossman.logging import get_class_logger
 from bossman.repo import Repo, Revision, Change
 
-import pkg_resources
-DISTRIBUTION = pkg_resources.require("bossman")[0]
-USER_AGENT = f'{DISTRIBUTION.project_name.capitalize()}/{DISTRIBUTION.version} (Python/{platform.python_version()}; {platform.system()}/{platform.release()}; +https://github.com/ynohat/bossman)'
+from importlib.metadata import version
+__version__ = version(__name__)
+USER_AGENT = f'Bossman/{__version__} (Python/{platform.python_version()}; {platform.system()}/{platform.release()}; +https://github.com/ynohat/bossman)'
 
 def if_initialized(func):
   def wrapper(bossman, *args, **kwargs):
@@ -90,8 +90,7 @@ class Bossman:
 
   @cached_property
   def version(self):
-    import pkg_resources
-    return pkg_resources.require("bossman")[0].version
+    return __version__
 
   def init(self, console: Console):
     self.init_git_config(console)

@@ -496,10 +496,10 @@ class ResourceType(ResourceTypeABC):
     try:
       on_update(resource, describe("STARTING"), None)
       try:
-        import pkg_resources
+        from bossman import __version__ as bossman_version
         tags = self.repo.get_tags_pointing_at(revision.id)
         activation_notes_revision = "{} ({})".format(revision.id, ", ".join(tags)) if len(tags) else revision.id
-        activation_notes = "activation of {} by {} using bossman {}".format(activation_notes_revision, self.repo.get_current_user_email(), pkg_resources.require("bossman")[0].version)
+        activation_notes = "activation of {} by {} using bossman {}".format(activation_notes_revision, self.repo.get_current_user_email(), bossman_version)
         (_, activation_status) = self.papi.activate(property_id, property_version, network, list(emails), activation_notes)
       except PAPIVersionAlreadyActivatingError:
         activations = self.papi.list_activations(property_id)
@@ -511,7 +511,7 @@ class ResourceType(ResourceTypeABC):
           None
         )
         if activation_status.property_version != property_version:
-          on_update(resource, describe("ACTIVATION of {} ALREADY IN PROGRESS".format(activation_status.property_version)), 1)
+          on_update(resource, describe("ACTIVATION of {} ALREADY IN PROGRESS".format(activation_status.property_version)), 1)
           return
 
       on_update(resource, describe(activation_status.status), activation_status.progress)
