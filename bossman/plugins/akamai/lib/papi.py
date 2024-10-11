@@ -179,7 +179,7 @@ class PAPIClient:
       edgeHostnames = list(PAPIEdgeHostname(**item) for item in response.json().get("edgeHostnames", {}).get("items", []))
     return edgeHostnames
 
-  def create_edgehostname(self, contractId, groupId, domainPrefix, domainSuffix, productId, ipVersionBehavior, secureNetwork, certEnrollmentId=None):
+  def create_edgehostname(self, contractId, groupId, domainPrefix, domainSuffix, productId, ipVersionBehavior, secureNetwork, certEnrollmentId=None, **kwargs):
     self.logger.debug(f'create_edgehostnames {domainPrefix}.{domainSuffix} contractId=${contractId} groupId=${groupId}')
     params=dict(contractId=contractId, groupId=groupId)
     body=dict(
@@ -188,6 +188,7 @@ class PAPIClient:
       productId=productId,
       ipVersionBehavior=ipVersionBehavior,
       secureNetwork=secureNetwork,
+      **kwargs
     )
     if certEnrollmentId != None:
       body['certEnrollmentId'] = certEnrollmentId
