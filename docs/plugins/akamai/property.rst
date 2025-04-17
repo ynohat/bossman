@@ -176,12 +176,15 @@ The purpose is threefold.
   record this information in a legible way in the regular Author field;
 * It provides a mechanism for bossman to correlate property versions with git revisions
 
-``bossman (pre)release [--rev HEAD] [-e|--exact-match] [glob*]``
+``bossman (pre)release [--rev HEAD] [-e|--exact-match] [-m|--message "MESSAGE"] [glob*]``
 _______________________________________________________________________
 
 **prerelease** : activates the selected revision and resources to the staging network
 
 **release** : the same, to the production network
+
+``--message|-m`` if specified, will prefix the activation notes - this can be used to reference
+  a build number, for example.
 
 If the property version has validation errors, activation is disallowed:
 

@@ -474,7 +474,7 @@ class ResourceType(ResourceTypeABC):
         "path": '/' + '/'.join(str(i) for i in err.absolute_path)
       })
 
-  def _release(self, network: str, resource: ResourceABC, revision: Revision, on_update: callable = lambda resource, status, progress: None):
+  def _release(self, network: str, resource: ResourceABC, revision: Revision, message: str, on_update: callable = lambda resource, status, progress: None):
     notes = revision.get_notes(resource.path)
     property_id = notes.get("property_id")
     if not property_id:
@@ -500,6 +500,8 @@ class ResourceType(ResourceTypeABC):
         tags = self.repo.get_tags_pointing_at(revision.id)
         activation_notes_revision = "{} ({})".format(revision.id, ", ".join(tags)) if len(tags) else revision.id
         activation_notes = "activation of {} by {} using bossman {}".format(activation_notes_revision, self.repo.get_current_user_email(), bossman_version)
+        if message:
+          activation_notes = "{}; {}".format(message.strip(), activation_notes)
         (_, activation_status) = self.papi.activate(property_id, property_version, network, list(emails), activation_notes)
       except PAPIVersionAlreadyActivatingError:
         activations = self.papi.list_activations(property_id)
@@ -522,11 +524,11 @@ class ResourceType(ResourceTypeABC):
     except PAPIVersionAlreadyActiveError:
       on_update(resource, describe("ALREADY ACTIVE"), 1)
 
-  def prerelease(self, resource: ResourceABC, revision: Revision, on_update: callable = lambda resource, status, progress: None):
-    return self._release("STAGING", resource, revision, on_update)
+  def prerelease(self, resource: ResourceABC, revision: Revision, message: str, on_update: callable = lambda resource, status, progress: None):
+    return self._release("STAGING", resource, revision, message, on_update)
 
-  def release(self, resource: ResourceABC, revision: Revision, on_update: callable = lambda resource, status, progress: None):
-    return self._release("PRODUCTION", resource, revision, on_update)
+  def release(self, resource: ResourceABC, revision: Revision, message: str, on_update: callable = lambda resource, status, progress: None):
+    return self._release("PRODUCTION", resource, revision, message, on_update)
 
 
   # def _release(self, resources: list, revision: Revision, network: str):

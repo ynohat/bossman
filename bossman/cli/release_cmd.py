@@ -19,6 +19,7 @@ console = Console()
 def init(subparsers: argparse._SubParsersAction):
   prerelease_parser = subparsers.add_parser("prerelease", help="prerelease applicable resources")
   prerelease_parser.add_argument("-e", "--exact-match", action="store_true", default=False, help="match resource exactly")
+  prerelease_parser.add_argument("-m", "--message", required=False, default=None, help="annotation, for relevant resource types")
   prerelease_parser.add_argument("--yes", action="store_true", default=False, help="don't prompt")
   prerelease_parser.add_argument("--rev", required=False, default="HEAD", help="commit id or git ref to prerelease")
   prerelease_parser.add_argument("glob", nargs="*", default="*", help="select resources by glob pattern")
@@ -26,12 +27,13 @@ def init(subparsers: argparse._SubParsersAction):
 
   release_parser = subparsers.add_parser("release", help="release applicable resources")
   release_parser.add_argument("-e", "--exact-match", action="store_true", default=False, help="match resource exactly")
+  release_parser.add_argument("-m", "--message", required=False, default=None, help="annotation, for relevant resource types")
   release_parser.add_argument("--yes", action="store_true", default=False, help="don't prompt")
   release_parser.add_argument("--rev", required=False, default="HEAD", help="commit id or git ref to release")
   release_parser.add_argument("glob", nargs="*", default="*", help="select resources by glob pattern")
   release_parser.set_defaults(func=exec, action="release")
 
-def exec(bossman: Bossman, yes, rev, glob, exact_match:bool, action, *args, **kwargs):
+def exec(bossman: Bossman, yes, rev, glob, exact_match:bool, action, message, *args, **kwargs):
   resources = bossman.get_resources(*glob, rev=rev, exact_match=exact_match)
   if len(resources) == 0:
     print('no resources selected')
@@ -92,7 +94,7 @@ def exec(bossman: Bossman, yes, rev, glob, exact_match:bool, action, *args, **kw
           description = resource.__rich__()
         task_id = progress_ui.add_task(description, total=100, activation_status="-", start=False)
         _on_update = partial(on_update, task_id)
-        futures.append(executor.submit(getattr(bossman, action), resource, revision, _on_update))
+        futures.append(executor.submit(getattr(bossman, action), resource, revision, message, _on_update))
       for resource, future in zip(deployed, futures):
         try:
           future.result()

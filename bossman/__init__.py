@@ -186,17 +186,17 @@ class Bossman:
     resource_type.validate_working_tree(resource)
 
   @if_initialized
-  def prerelease(self, resource: ResourceABC, revision: Revision, on_update: callable):
+  def prerelease(self, resource: ResourceABC, revision: Revision, message: str, on_update: callable):
     self.repo.fetch_notes(resource.path)
     resource_type = self.resource_manager.get_resource_type(resource.path)
-    resource_type.prerelease(resource, revision, on_update)
+    resource_type.prerelease(resource, revision, message, on_update)
     self.repo.push_notes(resource.path)
 
   @if_initialized
-  def release(self, resource: ResourceABC, revision: Revision, on_update: callable):
+  def release(self, resource: ResourceABC, revision: Revision, message: str, on_update: callable):
     self.repo.fetch_notes(resource.path)
     resource_type = self.resource_manager.get_resource_type(resource.path)
-    resource_type.release(resource, revision, on_update)
+    resource_type.release(resource, revision, message, on_update)
     self.repo.push_notes(resource.path)
 
   # @if_initialized

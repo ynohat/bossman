@@ -181,7 +181,7 @@ Validates the correctness of resources in the working copy.
 
 This is the only command that does not operate on a commit.
 
-``bossman (pre)prerelease [--rev HEAD] [-e|--exact-match] [glob*]``
+``bossman (pre)prerelease [--rev HEAD] [-e|--exact-match] [-m|--message "MESSAGE"] [glob*]``
 ____________________________________________________________________
 
 * ``prerelease``: makes a given revision available to an internal audience,
@@ -195,6 +195,9 @@ ____________________________________________________________________
 * a branch name
 * ``HEAD``
 * a relative ref
+
+``--message|-m`` will optionally annotate the release, when relevant
+
 
 ``bossman log [-e|--exact-match] [glob*]``
 __________________________________________________________

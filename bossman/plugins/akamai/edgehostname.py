@@ -187,10 +187,10 @@ class ResourceType(ResourceTypeABC):
       **data.get('edgeHostname'),
     )
 
-  def prerelease(self, resource: ResourceABC, revision: Revision, on_update: callable = lambda resource, status, progress: None):
+  def prerelease(self, resource: ResourceABC, revision: Revision, message: str, on_update: callable = lambda resource, status, progress: None):
     on_update(resource, '[grey53]STG Nothing to do[/]', 1)
 
-  def release(self, resource: ResourceABC, revision: Revision, on_update: callable = lambda resource, status, progress: None):
+  def release(self, resource: ResourceABC, revision: Revision, message: str, on_update: callable = lambda resource, status, progress: None):
     on_update(resource, '[grey53]PRD Nothing to do[/]', 1)
 
   def get_ehn_id(self, ehn: EdgeHostnameResource):

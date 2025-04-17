@@ -157,10 +157,10 @@ class ResourceTypeABC(ABC):
     pass
 
   @abstractmethod
-  def prerelease(self, resource: ResourceABC, revision: Revision, on_update: callable = lambda status, progress: None):
+  def prerelease(self, resource: ResourceABC, revision: Revision, message: str, on_update: callable = lambda status, progress: None):
     pass
 
   @abstractmethod
-  def release(self, resource: ResourceABC, revision: Revision, on_update: callable = lambda status, progress: None):
+  def release(self, resource: ResourceABC, revision: Revision, message: str, on_update: callable = lambda status, progress: None):
     pass
 
