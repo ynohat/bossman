@@ -31,6 +31,7 @@ class SharedPolicyPolicyType(Enum):
   SHARED = 'SHARED'
 
 class SharedPolicyCloudletType(Enum):
+  AP = 'AP'
   ER = 'ER'
   FR = 'FR'
   AS = 'AS'
