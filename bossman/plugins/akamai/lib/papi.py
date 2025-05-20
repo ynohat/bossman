@@ -318,8 +318,9 @@ class PAPIClient:
     headers = {}
     if "ruleFormat" in ruleTree:
       headers["Content-Type"] = "application/vnd.akamai.papirules.{}+json".format(ruleTree.get("ruleFormat"))
+    params = ruleTree.get("extraParams", {}).get("PUT", {})
     url = "/papi/v1/properties/{propertyId}/versions/{version}/rules".format(propertyId=propertyId, version=version)
-    response = self.session.put(url, json=ruleTree, headers=headers)
+    response = self.session.put(url, json=ruleTree, headers=headers, params=params)
     if response.status_code == 200:
       return PAPIPropertyVersionRuleTree(**response.json())
     if response.status_code == 400:
